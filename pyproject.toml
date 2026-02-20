@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lisa-mcp-server"
+version = "0.1.0"
+description = "MCP server for Microsoft LISA (Linux Integration Services Automation) framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["mcp", "lisa", "linux", "testing", "automation"]
+dependencies = [
+    "mcp>=1.0.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "rich>=13.0",
+    "click>=8.0",
+    "junitparser>=3.0",
+]
+
+[project.scripts]
+lisa-mcp = "lisa_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest", "pytest-asyncio"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["lisa_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

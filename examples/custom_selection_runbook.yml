@@ -1,0 +1,33 @@
+# Example: Hand-picked test cases + exclude list
+name: Custom Network Test Run
+concurrency: 1
+exit_on_first_failure: false
+import_builtin_tests: true
+
+variable:
+  - name: location
+    value: eastus
+  - name: subscription_id
+    value: $(subscription_id)
+
+platform:
+  - type: azure
+    admin_private_key_file: $(admin_private_key_file)
+    azure:
+      subscription_id: $(subscription_id)
+      marketplace: redhat rhel 8_5 8.5.2022012415
+
+testcase:
+  - criteria:
+      area: network             # Include all network tests
+  - criteria:
+      name: smoke_test          # Also include smoke test
+  - criteria:
+      name: legacy_test         # Exclude a specific old test
+    select_action: exclude
+
+notifier:
+  - type: console
+    log_level: DEBUG
+  - type: junit
+    path: ./reports/network_results.xml

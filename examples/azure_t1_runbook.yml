@@ -1,0 +1,37 @@
+# Example: Azure T1 runbook — P0+P1 tests on Ubuntu 20.04
+# Run with: lisa -r examples/azure_t1_runbook.yml -v subscription_id:<id> -v admin_private_key_file:<path>
+
+name: Azure T1 Validation
+test_project: Linux Image Quality
+test_pass: T1 BVT
+concurrency: 2
+exit_on_first_failure: false
+import_builtin_tests: true
+
+variable:
+  - name: location
+    value: westus3
+  - name: subscription_id
+    value: $(subscription_id)          # pass via: -v subscription_id:<your-id>
+  - name: admin_private_key_file
+    value: $(admin_private_key_file)   # pass via: -v admin_private_key_file:<path>
+
+platform:
+  - type: azure
+    admin_private_key_file: $(admin_private_key_file)
+    azure:
+      subscription_id: $(subscription_id)
+      marketplace: ubuntu focal 20.04-lts latest
+
+testcase:
+  - criteria:
+      priority: [0, 1]          # T1 = P0 + P1
+
+notifier:
+  - type: console
+    log_level: INFO
+  - type: html
+    path: ./reports/t1_report.html
+    auto_open: false
+  - type: junit
+    path: ./reports/t1_results.xml

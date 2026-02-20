@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lisa": {
+      "command": "python3",
+      "args": ["-m", "lisa_mcp.server"],
+      "env": {}
+    }
+  }
+}
