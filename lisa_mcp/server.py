@@ -10,6 +10,8 @@ through the Model Context Protocol so Claude (or any MCP client) can:
   • Build and validate runbook YAML files
   • Run tests via the lisa CLI
   • Parse and summarize test results
+  • Analyze failures with LLM (Claude) — root cause, severity, recommendations
+  • Generate HTML + Markdown analysis reports
 """
 
 from __future__ import annotations
@@ -31,6 +33,14 @@ from lisa_mcp.tools.runbook_builder import (
 )
 from lisa_mcp.tools.test_runner import run_tests, check_lisa_installed
 from lisa_mcp.tools.result_parser import parse_results, summarize
+from lisa_mcp.tools.log_collector import collect_run_logs, extract_error_context, TestLogContext
+from lisa_mcp.tools.llm_analyzer import analyze_failure, analyze_run
+from lisa_mcp.tools.report_generator import (
+    build_analysis_report,
+    generate_html_report,
+    generate_markdown_report,
+    save_report,
+)
 
 # ---------------------------------------------------------------------------
 # Server instance
@@ -590,6 +600,413 @@ def build_tier_runbook_file(
     if output_path:
         result["written_to"] = output_path
     return json.dumps(result, indent=2)
+
+
+# ============================================================================
+# TOOL 14 — analyze_test_run_with_llm
+# ============================================================================
+
+@mcp.tool()
+def analyze_test_run_with_llm(
+    results_source: str,
+    api_key: str,
+    run_dir: str | None = None,
+    model: str = "claude-sonnet-4-6",
+    max_failures_to_analyze: int = 20,
+) -> str:
+    """
+    Parse LISA test results and use Claude to analyze every failure — providing
+    root cause, severity, recommended fix, and a full run-level summary.
+
+    Parameters
+    ----------
+    results_source           : JUnit XML file path OR raw console output string.
+    api_key                  : Anthropic API key (get one at console.anthropic.com).
+    run_dir                  : Optional path to the LISA run output directory.
+                               When provided, per-test log files are extracted and
+                               sent to Claude as additional evidence for each failure.
+    model                    : Anthropic model (default "claude-sonnet-4-6").
+    max_failures_to_analyze  : Max LLM calls for per-failure analysis (default 20).
+                               Caps API cost on large runs.
+
+    Returns JSON with:
+      - run_metrics: total/passed/failed/skipped counts
+      - failure_analyses: list of FailureAnalysis objects (one per failed test)
+      - run_summary: RunAnalysisSummary with executive summary, priorities, recommendations
+    """
+    try:
+        # 1. Parse results
+        run_summary_raw = parse_results(results_source)
+
+        # 2. Collect log contexts (if run_dir provided)
+        log_map: dict[str, TestLogContext] = {}
+        if run_dir:
+            failed_names = [
+                r.name for r in run_summary_raw.results
+                if r.status in ("failed", "error")
+            ]
+            collection = collect_run_logs(
+                run_dir=run_dir,
+                failed_test_names=failed_names or None,
+            )
+            log_map = {ctx.test_name: ctx for ctx in collection.test_contexts}
+
+        # 3. Per-failure LLM analysis
+        failure_analyses = []
+        failed_results = [
+            r for r in run_summary_raw.results
+            if r.status in ("failed", "error")
+        ][:max_failures_to_analyze]
+
+        for result in failed_results:
+            log_ctx = log_map.get(result.name) or log_map.get(result.name.split(".")[-1])
+            fa = analyze_failure(
+                test_name=result.name,
+                failure_message=result.message,
+                stack_trace=result.stack_trace,
+                log_context=log_ctx,
+                api_key=api_key,
+                model=model,
+            )
+            failure_analyses.append(fa)
+
+        # 4. Run-level summary
+        run_analysis = analyze_run(
+            failure_analyses=failure_analyses,
+            total=run_summary_raw.total,
+            passed=run_summary_raw.passed,
+            failed=run_summary_raw.failed,
+            skipped=run_summary_raw.skipped,
+            api_key=api_key,
+            model=model,
+        )
+
+        return json.dumps(
+            {
+                "run_metrics": {
+                    "total":    run_summary_raw.total,
+                    "passed":   run_summary_raw.passed,
+                    "failed":   run_summary_raw.failed,
+                    "skipped":  run_summary_raw.skipped,
+                    "errors":   run_summary_raw.errors,
+                    "duration": run_summary_raw.duration_seconds,
+                },
+                "run_summary":       run_analysis.model_dump(),
+                "failure_analyses":  [fa.model_dump() for fa in failure_analyses],
+                "analyzed_count":    len(failure_analyses),
+                "truncated":         len(failed_results) < run_summary_raw.failed,
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
+
+
+# ============================================================================
+# TOOL 15 — analyze_failure_root_cause
+# ============================================================================
+
+@mcp.tool()
+def analyze_failure_root_cause(
+    test_name:     str,
+    failure_message: str,
+    api_key:       str,
+    stack_trace:   str = "",
+    log_file_path: str | None = None,
+    model:         str = "claude-sonnet-4-6",
+) -> str:
+    """
+    Deep-dive root cause analysis for a SINGLE test failure using Claude.
+
+    Use this when you want to investigate one failure in detail — for example
+    after a run, to understand why a specific test failed.
+
+    Parameters
+    ----------
+    test_name       : Full test name, e.g. "StorageTest.verify_disk_io".
+    failure_message : Short failure/error message from the test output.
+    api_key         : Anthropic API key.
+    stack_trace     : Optional full traceback or error output.
+    log_file_path   : Optional path to a specific log file for this test.
+                      If provided, error context is extracted and sent to Claude.
+    model           : Anthropic model (default "claude-sonnet-4-6").
+
+    Returns JSON with a FailureAnalysis object containing:
+      root_cause_category, root_cause_description, recommended_fix,
+      severity, relevant_log_lines, confidence.
+    """
+    try:
+        log_ctx: TestLogContext | None = None
+        if log_file_path:
+            error_lines, nbytes = extract_error_context(log_file_path)
+            snippet = "\n".join(error_lines)
+            log_ctx = TestLogContext(
+                test_name=test_name,
+                log_files_found=[log_file_path],
+                error_lines=error_lines,
+                context_snippet=snippet[:8000],
+                total_log_bytes=nbytes,
+                truncated=len(snippet) > 8000,
+            )
+
+        fa = analyze_failure(
+            test_name=test_name,
+            failure_message=failure_message,
+            stack_trace=stack_trace,
+            log_context=log_ctx,
+            api_key=api_key,
+            model=model,
+        )
+        return fa.model_dump_json(indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
+
+
+# ============================================================================
+# TOOL 16 — generate_analysis_report
+# ============================================================================
+
+@mcp.tool()
+def generate_analysis_report(
+    results_source:         str,
+    api_key:                str,
+    output_dir:             str,
+    run_dir:                str | None = None,
+    report_base_name:       str = "lisa_analysis",
+    model:                  str = "claude-sonnet-4-6",
+    max_failures_to_analyze: int = 20,
+) -> str:
+    """
+    Run full LLM analysis of a LISA test run and write HTML + Markdown reports.
+
+    This is the single-command way to go from raw results → beautiful report:
+      1. Parses test results (JUnit XML or console output)
+      2. Collects per-test log context (if run_dir given)
+      3. Calls Claude to analyze each failure
+      4. Calls Claude for a run-level summary
+      5. Generates a self-contained HTML report + Markdown report
+
+    Parameters
+    ----------
+    results_source          : JUnit XML file path OR raw console output string.
+    api_key                 : Anthropic API key.
+    output_dir              : Directory to write report files into (created if needed).
+    run_dir                 : Optional LISA run directory for per-test log files.
+    report_base_name        : Base filename without extension (default "lisa_analysis").
+    model                   : Anthropic model (default "claude-sonnet-4-6").
+    max_failures_to_analyze : LLM call cap (default 20).
+
+    Returns JSON with:
+      - html_path: absolute path to the generated HTML report
+      - markdown_path: absolute path to the generated Markdown report
+      - report: full AnalysisReport data structure
+    """
+    try:
+        # Parse
+        run_data = parse_results(results_source)
+
+        # Collect logs
+        log_map: dict[str, TestLogContext] = {}
+        if run_dir:
+            failed_names = [
+                r.name for r in run_data.results if r.status in ("failed", "error")
+            ]
+            col = collect_run_logs(run_dir=run_dir, failed_test_names=failed_names or None)
+            log_map = {ctx.test_name: ctx for ctx in col.test_contexts}
+
+        # Per-failure analysis
+        failed_results = [
+            r for r in run_data.results if r.status in ("failed", "error")
+        ][:max_failures_to_analyze]
+
+        failure_analyses = []
+        for result in failed_results:
+            log_ctx = log_map.get(result.name) or log_map.get(result.name.split(".")[-1])
+            fa = analyze_failure(
+                test_name=result.name,
+                failure_message=result.message,
+                stack_trace=result.stack_trace,
+                log_context=log_ctx,
+                api_key=api_key,
+                model=model,
+            )
+            failure_analyses.append(fa)
+
+        # Run summary
+        run_analysis = analyze_run(
+            failure_analyses=failure_analyses,
+            total=run_data.total,
+            passed=run_data.passed,
+            failed=run_data.failed,
+            skipped=run_data.skipped,
+            api_key=api_key,
+            model=model,
+        )
+
+        # Build report object
+        report = build_analysis_report(
+            summary=run_analysis,
+            failure_analyses=failure_analyses,
+            total=run_data.total,
+            passed=run_data.passed,
+            failed=run_data.failed,
+            skipped=run_data.skipped,
+            errors=run_data.errors,
+            duration_seconds=run_data.duration_seconds,
+            run_dir=run_dir,
+        )
+
+        # Write to disk
+        paths = save_report(report, output_dir, report_base_name)
+
+        return json.dumps(
+            {
+                "html_path":     paths["html"],
+                "markdown_path": paths["markdown"],
+                "report":        report.model_dump(),
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
+
+
+# ============================================================================
+# TOOL 17 — run_and_analyze
+# ============================================================================
+
+@mcp.tool()
+def run_and_analyze(
+    lisa_path:               str,
+    runbook_path:            str,
+    api_key:                 str,
+    output_dir:              str,
+    variables:               dict[str, str] | None = None,
+    model:                   str = "claude-sonnet-4-6",
+    timeout_seconds:         int = 7200,
+    max_failures_to_analyze: int = 20,
+    report_base_name:        str = "lisa_analysis",
+) -> str:
+    """
+    END-TO-END PIPELINE: run LISA tests → collect logs → analyze with Claude
+    → generate HTML + Markdown reports. Single tool call does everything.
+
+    ⚠️  WARNING: This deploys real cloud infrastructure if the runbook targets
+    Azure or another cloud platform. Confirm with the user before calling.
+
+    Parameters
+    ----------
+    lisa_path                : Root of the LISA repository.
+    runbook_path             : Path to the runbook YAML to execute.
+    api_key                  : Anthropic API key.
+    output_dir               : Directory to write analysis reports.
+    variables                : Additional -v name:value CLI overrides.
+    model                    : Anthropic model (default "claude-sonnet-4-6").
+    timeout_seconds          : LISA subprocess timeout (default 7200 = 2 hours).
+    max_failures_to_analyze  : LLM call cap per run (default 20).
+    report_base_name         : Base filename for reports (default "lisa_analysis").
+
+    Returns JSON with:
+      - run_result: exit code, success bool, stdout snippet
+      - html_path / markdown_path: report file paths
+      - report: full AnalysisReport data
+      - summary_line: one-line pass/fail summary
+    """
+    try:
+        import os
+
+        # Step 1 — Run tests
+        run_result = run_tests(
+            lisa_path=lisa_path,
+            runbook_path=runbook_path,
+            variables=variables,
+            timeout_seconds=timeout_seconds,
+        )
+
+        # Step 2 — Locate results: look for JUnit XML in common output locations
+        lisa_root = Path(lisa_path)
+        results_source: str | None = None
+        run_dir_path: str | None = None
+
+        # LISA writes to ./runtime/<timestamp>/ or ./runs/<timestamp>/
+        for subdir_name in ("runtime", "runs", "output", "results"):
+            subdir = lisa_root / subdir_name
+            if subdir.is_dir():
+                run_subdirs = sorted(
+                    (d for d in subdir.iterdir() if d.is_dir()),
+                    key=lambda d: d.stat().st_mtime,
+                    reverse=True,
+                )
+                for candidate in run_subdirs[:3]:
+                    xml = candidate / "lisa_results.xml"
+                    if not xml.exists():
+                        xml_files = list(candidate.glob("*.xml"))
+                        xml = xml_files[0] if xml_files else None
+                    if xml and xml.exists():
+                        results_source = str(xml)
+                        run_dir_path = str(candidate)
+                        break
+                if results_source:
+                    break
+
+        # Fallback: check CWD and lisa_root directly
+        if not results_source:
+            for search_root in (Path.cwd(), lisa_root):
+                for xml_candidate in (
+                    search_root / "lisa_results.xml",
+                    search_root / "results.xml",
+                ):
+                    if xml_candidate.exists():
+                        results_source = str(xml_candidate)
+                        run_dir_path = str(search_root)
+                        break
+                if results_source:
+                    break
+
+        # Final fallback: use stdout
+        if not results_source:
+            results_source = run_result.get("stdout", "")
+
+        # Step 3 — Analyze and generate report
+        analysis_json = generate_analysis_report(
+            results_source=results_source,
+            api_key=api_key,
+            output_dir=output_dir,
+            run_dir=run_dir_path,
+            report_base_name=report_base_name,
+            model=model,
+            max_failures_to_analyze=max_failures_to_analyze,
+        )
+        analysis = json.loads(analysis_json)
+
+        # Build concise summary
+        report_data = analysis.get("report", {})
+        metrics = report_data
+        total   = metrics.get("total", 0)
+        passed  = metrics.get("passed", 0)
+        failed  = metrics.get("failed", 0)
+        pct     = (passed / total * 100) if total else 0
+        health  = report_data.get("summary", {}).get("overall_health", "unknown").upper()
+
+        return json.dumps(
+            {
+                "run_result": {
+                    "success":    run_result["success"],
+                    "returncode": run_result["returncode"],
+                    "command":    run_result.get("command", ""),
+                },
+                "summary_line": (
+                    f"{health} | {passed}/{total} passed ({pct:.1f}%) | "
+                    f"{failed} failed"
+                ),
+                "html_path":     analysis.get("html_path"),
+                "markdown_path": analysis.get("markdown_path"),
+                "report":        report_data,
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
 
 
 # ============================================================================

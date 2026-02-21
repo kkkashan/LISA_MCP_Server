@@ -137,3 +137,77 @@ class TestRunSummary(BaseModel):
     errors: int
     duration_seconds: float
     results: list[TestResult] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# LLM analysis models
+# ---------------------------------------------------------------------------
+
+class RootCauseCategory(str, Enum):
+    """Failure category the LLM selects for each failed test."""
+    KERNEL_PANIC       = "kernel_panic"
+    NETWORK_TIMEOUT    = "network_timeout"
+    DISK_IO_ERROR      = "disk_io_error"
+    PERMISSION_DENIED  = "permission_denied"
+    PACKAGE_NOT_FOUND  = "package_not_found"
+    SERVICE_CRASH      = "service_crash"
+    ASSERTION_FAILURE  = "assertion_failure"
+    TIMEOUT            = "timeout"
+    ENVIRONMENT_SETUP  = "environment_setup"
+    FLAKY_TEST         = "flaky_test"
+    INFRASTRUCTURE     = "infrastructure"
+    UNKNOWN            = "unknown"
+
+
+class FailureSeverity(str, Enum):
+    """Business impact of a single test failure."""
+    CRITICAL = "critical"   # Blocks release / data loss
+    HIGH     = "high"       # Major feature broken
+    MEDIUM   = "medium"     # Partial functionality impacted
+    LOW      = "low"        # Minor / informational
+
+
+# Severity sort key — lower = more severe
+_SEVERITY_ORDER: dict[str, int] = {
+    "critical": 0, "high": 1, "medium": 2, "low": 3
+}
+
+
+class FailureAnalysis(BaseModel):
+    """Structured LLM analysis for a single failed test case."""
+    test_name:               str
+    root_cause_category:     RootCauseCategory = RootCauseCategory.UNKNOWN
+    root_cause_description:  str = ""
+    recommended_fix:         str = ""
+    severity:                FailureSeverity = FailureSeverity.MEDIUM
+    relevant_log_lines:      list[str] = Field(default_factory=list)
+    confidence:              float = 0.0
+
+    @property
+    def severity_order(self) -> int:
+        return _SEVERITY_ORDER.get(self.severity.value, 99)
+
+
+class RunAnalysisSummary(BaseModel):
+    """Run-level summary produced by the LLM after analyzing all failures."""
+    overall_health:     str          = "unknown"   # healthy|degraded|critical|unknown
+    health_score:       float        = 0.0          # 0.0–1.0 pass-rate weighted by severity
+    failure_patterns:   list[str]    = Field(default_factory=list)
+    top_priorities:     list[str]    = Field(default_factory=list)
+    environment_issues: list[str]    = Field(default_factory=list)
+    recommendations:    list[str]    = Field(default_factory=list)
+    executive_summary:  str          = ""
+
+
+class AnalysisReport(BaseModel):
+    """Complete analysis report combining run metrics + LLM analysis."""
+    run_dir:          str | None    = None
+    generated_at:     str           = ""
+    total:            int           = 0
+    passed:           int           = 0
+    failed:           int           = 0
+    skipped:          int           = 0
+    errors:           int           = 0
+    duration_seconds: float         = 0.0
+    summary:          RunAnalysisSummary = Field(default_factory=RunAnalysisSummary)
+    failure_analyses: list[FailureAnalysis] = Field(default_factory=list)
