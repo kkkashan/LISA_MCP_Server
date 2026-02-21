@@ -37,12 +37,16 @@ LISA (Linux Integration Services Automation) is Microsoft's quality validation s
 | **[QUICKSTART.md](QUICKSTART.md)** | Get running in 10 minutes |
 | **[INSTALL.md](INSTALL.md)** | Full installation guide for all platforms |
 | **[USAGE.md](USAGE.md)** | Detailed usage with real examples |
-| **[docs/tools-reference.md](docs/tools-reference.md)** | Complete reference for all 13 MCP tools |
+| **[docs/running-lisa.md](docs/running-lisa.md)** | Step-by-step guide to running LISA tests |
+| **[docs/tools-reference.md](docs/tools-reference.md)** | Complete reference for all 17 MCP tools |
 | **[docs/test-discovery.md](docs/test-discovery.md)** | How test scanning and filtering works |
 | **[docs/writing-tests.md](docs/writing-tests.md)** | Step-by-step guide to writing new LISA tests |
 | **[docs/runbook-guide.md](docs/runbook-guide.md)** | Complete runbook authoring guide |
+| **[docs/llm-analysis.md](docs/llm-analysis.md)** | LLM-powered failure analysis pipeline |
 | **[docs/automation-guide.md](docs/automation-guide.md)** | CI/CD pipeline integration |
 | **[docs/troubleshooting.md](docs/troubleshooting.md)** | Common problems and fixes |
+| **[CHANGELOG.md](CHANGELOG.md)** | Version history and release notes |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute to this project |
 
 ---
 
@@ -84,10 +88,12 @@ lisa-mcp-server/
 │       └── result_parser.py          ← JUnit XML + console output parser
 │
 ├── docs/
-│   ├── tools-reference.md            ← All 13 tools documented
+│   ├── running-lisa.md               ← Step-by-step run guide
+│   ├── tools-reference.md            ← All 17 tools documented
 │   ├── test-discovery.md             ← Discovery internals
 │   ├── writing-tests.md              ← Test authoring guide
 │   ├── runbook-guide.md              ← Runbook authoring guide
+│   ├── llm-analysis.md               ← LLM analysis pipeline
 │   ├── automation-guide.md           ← CI/CD integration
 │   └── troubleshooting.md            ← Problem solving
 │
