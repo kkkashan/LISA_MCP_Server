@@ -1,10 +1,10 @@
 """
-LLM analyzer — use Claude (claude-sonnet-4-6) with tool_use to produce
+LLM analyzer — use Azure OpenAI Responses API to produce
 structured failure analyses and run-level summaries.
 
 Design
 ------
-- All Anthropic API calls use tool_choice to force structured JSON output.
+- All API calls use tool_choice to force structured JSON output.
 - The API key is always passed explicitly — never read from the environment.
 - Per-failure analysis is bounded by MAX_CHARS_PER_TEST from log_collector.
 - Run-level analysis sends a compact digest (not raw logs) so token usage
@@ -13,9 +13,10 @@ Design
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-import anthropic
+import httpx
 
 from lisa_mcp.models import (
     FailureAnalysis,
@@ -26,17 +27,28 @@ from lisa_mcp.models import (
 from lisa_mcp.tools.log_collector import TestLogContext
 
 # ---------------------------------------------------------------------------
-# Tool schemas — passed as tools= to the Anthropic API.
+# Default Azure OpenAI endpoint
+# ---------------------------------------------------------------------------
+
+_DEFAULT_ENDPOINT = (
+    "https://kkopenailearn.openai.azure.com/openai/responses"
+    "?api-version=2025-04-01-preview"
+)
+
+# ---------------------------------------------------------------------------
+# Tool schemas — passed as tools= to the Azure OpenAI Responses API.
 # Field names mirror the Pydantic models exactly.
 # ---------------------------------------------------------------------------
 
 _FAILURE_TOOL: dict[str, Any] = {
+    "type": "function",
     "name": "report_failure_analysis",
     "description": (
         "Report the structured root-cause analysis for a single LISA test failure. "
         "Call this tool exactly once with all required fields populated."
     ),
-    "input_schema": {
+    "strict": True,
+    "parameters": {
         "type": "object",
         "properties": {
             "test_name": {"type": "string"},
@@ -74,8 +86,6 @@ _FAILURE_TOOL: dict[str, Any] = {
             },
             "confidence": {
                 "type": "number",
-                "minimum": 0.0,
-                "maximum": 1.0,
                 "description": "Confidence in this analysis (0.0=uncertain, 1.0=certain).",
             },
         },
@@ -88,16 +98,19 @@ _FAILURE_TOOL: dict[str, Any] = {
             "relevant_log_lines",
             "confidence",
         ],
+        "additionalProperties": False,
     },
 }
 
 _RUN_TOOL: dict[str, Any] = {
+    "type": "function",
     "name": "report_run_analysis",
     "description": (
         "Report the structured summary analysis for an entire LISA test run. "
         "Call this tool exactly once."
     ),
-    "input_schema": {
+    "strict": True,
+    "parameters": {
         "type": "object",
         "properties": {
             "overall_health": {
@@ -110,8 +123,6 @@ _RUN_TOOL: dict[str, Any] = {
             },
             "health_score": {
                 "type": "number",
-                "minimum": 0.0,
-                "maximum": 1.0,
                 "description": (
                     "Weighted pass rate: 1.0 = everything passes, 0.0 = all critical failures."
                 ),
@@ -153,6 +164,7 @@ _RUN_TOOL: dict[str, Any] = {
             "recommendations",
             "executive_summary",
         ],
+        "additionalProperties": False,
     },
 }
 
@@ -178,6 +190,53 @@ When analyzing failures:
 
 
 # ---------------------------------------------------------------------------
+# Internal: call Azure OpenAI Responses API
+# ---------------------------------------------------------------------------
+
+def _call_responses_api(
+    *,
+    instructions: str,
+    input_text: str,
+    tools: list[dict[str, Any]],
+    tool_choice: dict[str, str],
+    api_key: str,
+    model: str,
+    endpoint: str,
+    timeout: int = 120,
+) -> dict[str, Any]:
+    """Make a single call to the Azure OpenAI Responses API."""
+    payload = {
+        "model": model,
+        "instructions": instructions,
+        "input": input_text,
+        "tools": tools,
+        "tool_choice": tool_choice,
+    }
+    headers = {
+        "api-key": api_key,
+        "Content-Type": "application/json",
+    }
+    with httpx.Client(timeout=timeout) as client:
+        resp = client.post(endpoint, json=payload, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def _extract_tool_arguments(
+    response_data: dict[str, Any],
+    tool_name: str,
+) -> dict[str, Any]:
+    """Extract parsed arguments from the first function_call matching *tool_name*."""
+    for item in response_data.get("output", []):
+        if item.get("type") == "function_call" and item.get("name") == tool_name:
+            return json.loads(item["arguments"])
+    raise ValueError(
+        f"Model did not call tool '{tool_name}'. "
+        f"Response output types: {[o.get('type') for o in response_data.get('output', [])]}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -187,11 +246,12 @@ def analyze_failure(
     stack_trace:     str,
     log_context:     TestLogContext | None,
     api_key:         str,
-    model:           str = "claude-sonnet-4-6",
+    model:           str = "gpt-4o",
     max_tokens:      int = 1500,
+    endpoint:        str = _DEFAULT_ENDPOINT,
 ) -> FailureAnalysis:
     """
-    Analyze a single test failure with Claude.
+    Analyze a single test failure with Azure OpenAI.
 
     Parameters
     ----------
@@ -199,25 +259,26 @@ def analyze_failure(
     failure_message : Short error from JUnit XML or console output.
     stack_trace     : Full traceback / error output.
     log_context     : Optional TestLogContext from log_collector.
-    api_key         : Anthropic API key.
-    model           : Model to use (default claude-sonnet-4-6).
-    max_tokens      : Max response tokens.
+    api_key         : Azure OpenAI API key.
+    model           : Model deployment to use (default gpt-4o).
+    max_tokens      : Max response tokens (unused with Responses API, kept for signature compat).
+    endpoint        : Azure OpenAI Responses API endpoint URL.
 
     Returns FailureAnalysis populated from tool_use response.
     """
-    client = anthropic.Anthropic(api_key=api_key)
     prompt = _build_failure_prompt(test_name, failure_message, stack_trace, log_context)
 
-    response = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=_SYSTEM_PROMPT,
+    response_data = _call_responses_api(
+        instructions=_SYSTEM_PROMPT,
+        input_text=prompt,
         tools=[_FAILURE_TOOL],
-        tool_choice={"type": "tool", "name": "report_failure_analysis"},
-        messages=[{"role": "user", "content": prompt}],
+        tool_choice={"type": "function", "name": "report_failure_analysis"},
+        api_key=api_key,
+        model=model,
+        endpoint=endpoint,
     )
 
-    data = _extract_tool_input(response, "report_failure_analysis")
+    data = _extract_tool_arguments(response_data, "report_failure_analysis")
     return FailureAnalysis(
         test_name=data.get("test_name", test_name),
         root_cause_category=RootCauseCategory(
@@ -240,8 +301,9 @@ def analyze_run(
     failed:   int,
     skipped:  int,
     api_key:  str,
-    model:    str = "claude-sonnet-4-6",
+    model:    str = "gpt-4o",
     max_tokens: int = 2000,
+    endpoint:   str = _DEFAULT_ENDPOINT,
 ) -> RunAnalysisSummary:
     """
     Produce a run-level summary from pre-computed per-failure analyses.
@@ -249,19 +311,19 @@ def analyze_run(
     Sends a compact digest (not raw logs), so token usage scales with
     failure count, not log volume.
     """
-    client = anthropic.Anthropic(api_key=api_key)
     prompt = _build_run_prompt(failure_analyses, total, passed, failed, skipped)
 
-    response = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=_SYSTEM_PROMPT,
+    response_data = _call_responses_api(
+        instructions=_SYSTEM_PROMPT,
+        input_text=prompt,
         tools=[_RUN_TOOL],
-        tool_choice={"type": "tool", "name": "report_run_analysis"},
-        messages=[{"role": "user", "content": prompt}],
+        tool_choice={"type": "function", "name": "report_run_analysis"},
+        api_key=api_key,
+        model=model,
+        endpoint=endpoint,
     )
 
-    data = _extract_tool_input(response, "report_run_analysis")
+    data = _extract_tool_arguments(response_data, "report_run_analysis")
     return RunAnalysisSummary(
         overall_health=data.get("overall_health", "unknown"),
         health_score=float(data.get("health_score", 0.0)),
@@ -366,22 +428,3 @@ def _build_run_prompt(
         "with your structured summary.",
     ]
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-def _extract_tool_input(
-    response: anthropic.types.Message,
-    tool_name: str,
-) -> dict[str, Any]:
-    """Extract input dict from the first ToolUseBlock matching *tool_name*."""
-    for block in response.content:
-        if hasattr(block, "type") and block.type == "tool_use":
-            if block.name == tool_name:
-                return block.input  # type: ignore[return-value]
-    raise ValueError(
-        f"Model did not call tool '{tool_name}'. "
-        f"Response content types: {[getattr(b,'type','?') for b in response.content]}"
-    )

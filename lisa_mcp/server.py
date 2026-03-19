@@ -2,7 +2,7 @@
 LISA MCP Server
 ===============
 Exposes Microsoft LISA (Linux Integration Services Automation) capabilities
-through the Model Context Protocol so Claude (or any MCP client) can:
+through the Model Context Protocol so any MCP client can:
 
   • Discover and search test cases in a LISA repository
   • Filter tests by tier, priority, OS, platform, area
@@ -10,7 +10,7 @@ through the Model Context Protocol so Claude (or any MCP client) can:
   • Build and validate runbook YAML files
   • Run tests via the lisa CLI
   • Parse and summarize test results
-  • Analyze failures with LLM (Claude) — root cause, severity, recommendations
+  • Analyze failures with LLM (Azure OpenAI) — root cause, severity, recommendations
   • Generate HTML + Markdown analysis reports
 """
 
@@ -611,21 +611,21 @@ def analyze_test_run_with_llm(
     results_source: str,
     api_key: str,
     run_dir: str | None = None,
-    model: str = "claude-sonnet-4-6",
+    model: str = "gpt-4o",
     max_failures_to_analyze: int = 20,
 ) -> str:
     """
-    Parse LISA test results and use Claude to analyze every failure — providing
+    Parse LISA test results and use Azure OpenAI to analyze every failure — providing
     root cause, severity, recommended fix, and a full run-level summary.
 
     Parameters
     ----------
     results_source           : JUnit XML file path OR raw console output string.
-    api_key                  : Anthropic API key (get one at console.anthropic.com).
+    api_key                  : Azure OpenAI API key.
     run_dir                  : Optional path to the LISA run output directory.
                                When provided, per-test log files are extracted and
-                               sent to Claude as additional evidence for each failure.
-    model                    : Anthropic model (default "claude-sonnet-4-6").
+                               sent to Azure OpenAI as additional evidence for each failure.
+    model                    : Azure OpenAI model (default "gpt-4o").
     max_failures_to_analyze  : Max LLM calls for per-failure analysis (default 20).
                                Caps API cost on large runs.
 
@@ -713,10 +713,10 @@ def analyze_failure_root_cause(
     api_key:       str,
     stack_trace:   str = "",
     log_file_path: str | None = None,
-    model:         str = "claude-sonnet-4-6",
+    model:         str = "gpt-4o",
 ) -> str:
     """
-    Deep-dive root cause analysis for a SINGLE test failure using Claude.
+    Deep-dive root cause analysis for a SINGLE test failure using Azure OpenAI.
 
     Use this when you want to investigate one failure in detail — for example
     after a run, to understand why a specific test failed.
@@ -725,11 +725,11 @@ def analyze_failure_root_cause(
     ----------
     test_name       : Full test name, e.g. "StorageTest.verify_disk_io".
     failure_message : Short failure/error message from the test output.
-    api_key         : Anthropic API key.
+    api_key         : Azure OpenAI API key.
     stack_trace     : Optional full traceback or error output.
     log_file_path   : Optional path to a specific log file for this test.
-                      If provided, error context is extracted and sent to Claude.
-    model           : Anthropic model (default "claude-sonnet-4-6").
+                      If provided, error context is extracted and sent to Azure OpenAI.
+    model           : Azure OpenAI model (default "gpt-4o").
 
     Returns JSON with a FailureAnalysis object containing:
       root_cause_category, root_cause_description, recommended_fix,
@@ -773,7 +773,7 @@ def generate_analysis_report(
     output_dir:             str,
     run_dir:                str | None = None,
     report_base_name:       str = "lisa_analysis",
-    model:                  str = "claude-sonnet-4-6",
+    model:                  str = "gpt-4o",
     max_failures_to_analyze: int = 20,
 ) -> str:
     """
@@ -782,18 +782,18 @@ def generate_analysis_report(
     This is the single-command way to go from raw results → beautiful report:
       1. Parses test results (JUnit XML or console output)
       2. Collects per-test log context (if run_dir given)
-      3. Calls Claude to analyze each failure
-      4. Calls Claude for a run-level summary
+      3. Calls Azure OpenAI to analyze each failure
+      4. Calls Azure OpenAI for a run-level summary
       5. Generates a self-contained HTML report + Markdown report
 
     Parameters
     ----------
     results_source          : JUnit XML file path OR raw console output string.
-    api_key                 : Anthropic API key.
+    api_key                 : Azure OpenAI API key.
     output_dir              : Directory to write report files into (created if needed).
     run_dir                 : Optional LISA run directory for per-test log files.
     report_base_name        : Base filename without extension (default "lisa_analysis").
-    model                   : Anthropic model (default "claude-sonnet-4-6").
+    model                   : Azure OpenAI model (default "gpt-4o").
     max_failures_to_analyze : LLM call cap (default 20).
 
     Returns JSON with:
@@ -882,13 +882,13 @@ def run_and_analyze(
     api_key:                 str,
     output_dir:              str,
     variables:               dict[str, str] | None = None,
-    model:                   str = "claude-sonnet-4-6",
+    model:                   str = "gpt-4o",
     timeout_seconds:         int = 7200,
     max_failures_to_analyze: int = 20,
     report_base_name:        str = "lisa_analysis",
 ) -> str:
     """
-    END-TO-END PIPELINE: run LISA tests → collect logs → analyze with Claude
+    END-TO-END PIPELINE: run LISA tests → collect logs → analyze with Azure OpenAI
     → generate HTML + Markdown reports. Single tool call does everything.
 
     ⚠️  WARNING: This deploys real cloud infrastructure if the runbook targets
@@ -898,10 +898,10 @@ def run_and_analyze(
     ----------
     lisa_path                : Root of the LISA repository.
     runbook_path             : Path to the runbook YAML to execute.
-    api_key                  : Anthropic API key.
+    api_key                  : Azure OpenAI API key.
     output_dir               : Directory to write analysis reports.
     variables                : Additional -v name:value CLI overrides.
-    model                    : Anthropic model (default "claude-sonnet-4-6").
+    model                    : Azure OpenAI model (default "gpt-4o").
     timeout_seconds          : LISA subprocess timeout (default 7200 = 2 hours).
     max_failures_to_analyze  : LLM call cap per run (default 20).
     report_base_name         : Base filename for reports (default "lisa_analysis").
