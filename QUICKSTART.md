@@ -1,13 +1,14 @@
 # Quickstart — LISA MCP Server
 
-Get from zero to the AI running LISA tests in 10 minutes.
+Get from zero to AI-powered LISA testing in 10 minutes.
 
 ---
 
 ## Prerequisites
 
 - Python 3.10 or later
-- - Git
+- Git
+- VS Code with GitHub Copilot (or any MCP-compatible client)
 
 ---
 
@@ -18,7 +19,7 @@ Get from zero to the AI running LISA tests in 10 minutes.
 git clone https://github.com/microsoft/lisa.git ~/lisa
 
 # Clone this MCP server
-git clone <this-repo-url> ~/lisa-mcp-server
+git clone https://github.com/kkkashan/LISA_MCP_Server.git ~/lisa-mcp-server
 ```
 
 ---
@@ -41,43 +42,42 @@ python3 -c "from lisa_mcp.server import mcp; print('OK —', mcp.name)"
 
 ## Step 3 — Register with VS Code
 
-Open or create `.vscode/mcp.json` and add:
+The repo ships with `.vscode/mcp.json` pre-configured. Open the workspace in
+VS Code and it will detect the MCP server automatically.
+
+If you need to set the path manually, edit `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
-    "lisa": {
-      "command": "python3",
-      "args": ["-m", "lisa_mcp.server"],
-      "cwd": "/home/YOUR_USER/lisa-mcp-server"
-    }
-  }
+ "servers": {
+ "lisa": {
+ "command": "python3",
+ "args": ["-m", "lisa_mcp.server"],
+ "cwd": "/absolute/path/to/lisa-mcp-server"
+ }
+ }
 }
 ```
 
-Replace `/home/YOUR_USER/lisa-mcp-server` with the real absolute path from `pwd`.
-
-Restart VS Code:
+Get your absolute path with:
 
 ```bash
-the AI
+cd ~/lisa-mcp-server && pwd
 ```
 
 ---
 
-## Step 4 — Verify the MCP tools are available
+## Step 4 — Start the server
 
-In VS Code, type:
+In VS Code, open the Command Palette → **MCP: Start Server** → select **lisa**.
 
-```
-/mcp
-```
-
-You should see `lisa` listed as a connected server with 13 tools.
+Or click the **Start** button that appears above the server entry in `.vscode/mcp.json`.
 
 ---
 
 ## Step 5 — Your first commands
+
+Open GitHub Copilot Chat (or your MCP client) and try:
 
 ### 5a. Check what test areas exist
 
@@ -85,7 +85,7 @@ You should see `lisa` listed as a connected server with 13 tools.
 Show me all the functional areas in my LISA repo at ~/lisa
 ```
 
-The AI calls `list_test_areas(lisa_path="~/lisa")` and returns something like:
+The AI calls `list_test_areas(lisa_path="~/lisa")` and returns:
 
 ```
 network, storage, cpu, memory, nvme, core, provisioning, hyperv, ...
@@ -107,18 +107,18 @@ Build a T1 Azure runbook for Ubuntu 22.04 LTS and save it to ~/my_runbook.yml
 
 The AI calls `build_tier_runbook_file(tier="T1", platform_type="azure", output_path="~/my_runbook.yml")`.
 
-### 5d. Generate a new test
+### 5d. Generate a new test suite
 
 ```
 Write a LISA test suite called "KernelSmokeTest" in the "cpu" area
 that checks the kernel version is at least 5.15. Priority 0, Azure only.
 ```
 
-The AI calls `generate_test_suite_code(...)` and returns complete Python source ready to copy into the LISA repo.
+The AI calls `generate_test_suite_code(...)` and returns complete Python source.
 
 ---
 
-## Step 6 — Run tests (requires LISA installed + Azure credentials)
+## Step 6 — Run tests (requires LISA + Azure credentials)
 
 Install LISA itself:
 
@@ -128,7 +128,7 @@ pip install -e .
 lisa --version
 ```
 
-Then ask the AI:
+Then ask:
 
 ```
 Run the runbook at ~/my_runbook.yml using the LISA repo at ~/lisa.
@@ -140,10 +140,29 @@ The AI calls `run_lisa_tests(...)` and returns stdout/stderr + exit code.
 
 ---
 
+## Step 7 — Analyze failures with Azure OpenAI (optional)
+
+If tests fail, get AI-powered root cause analysis:
+
+```
+Analyze the failures in ~/lisa/lisa_results.xml
+Azure OpenAI key: <your-key>
+Save the report to ~/reports/
+```
+
+The AI calls `generate_analysis_report(...)` and produces an HTML + Markdown report.
+
+> **Azure OpenAI endpoint (pre-configured):**
+> `https://kkopenailearn.openai.azure.com/openai/responses?api-version=2025-04-01-preview`
+> Pass your API key when calling any `analyze_*` tool.
+
+---
+
 ## What's next?
 
 - [INSTALL.md](INSTALL.md) — detailed installation for Windows/WSL/Linux/macOS
 - [USAGE.md](USAGE.md) — full usage guide with real examples
 - [docs/writing-tests.md](docs/writing-tests.md) — write your own test cases
 - [docs/runbook-guide.md](docs/runbook-guide.md) — master runbook configuration
+- [docs/llm-analysis.md](docs/llm-analysis.md) — AI-powered failure analysis pipeline
 - [docs/tools-reference.md](docs/tools-reference.md) — every tool explained in depth

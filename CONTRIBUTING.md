@@ -33,7 +33,7 @@ cd LISA_MCP_Server
 
 # 2. Create a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate # Windows: .venv\Scripts\activate
 
 # 3. Install the package in editable mode with dev dependencies
 pip install -e ".[dev]"
@@ -50,17 +50,17 @@ The `[dev]` extra installs `ruff`, `mypy`, `pytest`, and `pytest-asyncio`.
 
 ```
 lisa_mcp/
-├── server.py          ← FastMCP server — all tool/resource/prompt definitions
-├── models.py          ← Pydantic v2 data models (no business logic)
+├── server.py ← FastMCP server — all tool/resource/prompt definitions
+├── models.py ← Pydantic v2 data models (no business logic)
 └── tools/
-    ├── test_discovery.py   ← AST-based LISA repo scanner
-    ├── test_generator.py   ← Python + YAML code generation
-    ├── runbook_builder.py  ← Runbook read/write/validate
-    ├── test_runner.py      ← lisa CLI subprocess wrapper
-    ├── result_parser.py    ← JUnit XML + console output parser
-    ├── log_collector.py    ← Memory-safe log tail and error extraction
-    ├── llm_analyzer.py     ← Azure OpenAI API calls (structured tool_use)
-    └── report_generator.py ← HTML + Markdown report generation
+ ├── test_discovery.py ← AST-based LISA repo scanner
+ ├── test_generator.py ← Python + YAML code generation
+ ├── runbook_builder.py ← Runbook read/write/validate
+ ├── test_runner.py ← lisa CLI subprocess wrapper
+ ├── result_parser.py ← JUnit XML + console output parser
+ ├── log_collector.py ← Memory-safe log tail and error extraction
+ ├── llm_analyzer.py ← Azure OpenAI API calls (structured tool_use)
+ └── report_generator.py ← HTML + Markdown report generation
 ```
 
 **Rule of thumb**: business logic lives in `tools/`; `server.py` only wires tools to MCP and handles JSON serialization; `models.py` holds pure data structures.
@@ -135,21 +135,21 @@ All public functions should have type annotations. Use `from __future__ import a
 ```python
 @mcp.tool()
 def my_new_tool(param_a: str, param_b: int = 10) -> str:
-    """
-    One-line description shown to the MCP client.
+ """
+ One-line description shown to the MCP client.
 
-    Parameters
-    ----------
-    param_a : Explanation of param_a.
-    param_b : Explanation of param_b (default 10).
+ Parameters
+ ----------
+ param_a : Explanation of param_a.
+ param_b : Explanation of param_b (default 10).
 
-    Returns JSON with ...
-    """
-    try:
-        result = do_the_work(param_a, param_b)
-        return json.dumps(result, indent=2)
-    except Exception as exc:
-        return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
+ Returns JSON with ...
+ """
+ try:
+ result = do_the_work(param_a, param_b)
+ return json.dumps(result, indent=2)
+ except Exception as exc:
+ return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
 ```
 
 4. **Write tests** in `tests/test_<module>.py`.

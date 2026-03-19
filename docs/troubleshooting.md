@@ -132,13 +132,13 @@ cat .vscode/mcp.json
 Make sure `cwd` is the **absolute** path to `lisa-mcp-server`, not a `~` shorthand:
 ```json
 {
-  "mcpServers": {
-    "lisa": {
-      "command": "python3",
-      "args": ["-m", "lisa_mcp.server"],
-      "cwd": "/home/kkashanjat/lisa-mcp-server"   // absolute path
-    }
-  }
+ "mcpServers": {
+ "lisa": {
+ "command": "python3",
+ "args": ["-m", "lisa_mcp.server"],
+ "cwd": "/home/kkashanjat/lisa-mcp-server" // absolute path
+ }
+ }
 }
 ```
 
@@ -147,15 +147,15 @@ Make sure `cwd` is the **absolute** path to `lisa-mcp-server`, not a `~` shortha
 which python3
 # Use the full path if needed:
 {
-  "command": "/usr/bin/python3",
-  ...
+ "command": "/usr/bin/python3",
+ ...
 }
 ```
 
 **Step 4 — Restart VS Code:**
 ```bash
 # Close all VS Code windows, then reopen
-the AI
+The AI
 ```
 
 ---
@@ -214,12 +214,12 @@ ValueError: LISA path does not exist or is not a directory: /path/to/lisa
 ```bash
 # Verify the path exists
 ls ~/lisa
-ls ~/lisa/lisa/microsoft/testsuites   # should contain .py files
+ls ~/lisa/lisa/microsoft/testsuites # should contain .py files
 
 # Use the absolute path when calling the tool:
 discover_test_cases(lisa_path="/home/kkashanjat/lisa")
 # NOT:
-discover_test_cases(lisa_path="~/lisa")   # ~ not expanded in tool calls
+discover_test_cases(lisa_path="~/lisa") # ~ not expanded in tool calls
 ```
 
 ---
@@ -250,14 +250,14 @@ python3 -c "
 import ast, pathlib, sys
 errors = []
 for f in pathlib.Path('~/lisa').expanduser().rglob('*.py'):
-    if any(p in f.parts for p in ('.venv','__pycache__','build')):
-        continue
-    try:
-        ast.parse(f.read_text(errors='replace'))
-    except SyntaxError as e:
-        errors.append((str(f), str(e)))
+ if any(p in f.parts for p in ('.venv','__pycache__','build')):
+ continue
+ try:
+ ast.parse(f.read_text(errors='replace'))
+ except SyntaxError as e:
+ errors.append((str(f), str(e)))
 for path, err in errors:
-    print(f'SYNTAX ERROR: {path}: {err}')
+ print(f'SYNTAX ERROR: {path}: {err}')
 print(f'{len(errors)} files with syntax errors')
 "
 ```
@@ -271,9 +271,9 @@ print(f'{len(errors)} files with syntax errors')
 **Fix:**
 ```bash
 # Clone the LISA repo to a WSL2-native path instead:
-git clone https://github.com/microsoft/lisa ~/lisa   # fast (~/)
+git clone https://github.com/microsoft/lisa ~/lisa # fast (~/)
 # instead of:
-# git clone https://github.com/microsoft/lisa /mnt/c/Users/you/lisa   # slow
+# git clone https://github.com/microsoft/lisa /mnt/c/Users/you/lisa # slow
 ```
 
 On a WSL2-native path, full LISA repo discovery takes ~3 seconds instead of 30–60 seconds.
@@ -324,8 +324,8 @@ lisa -r my_runbook.yml -v subscription_id:YOUR_SUBSCRIPTION_ID
 or add to the runbook:
 ```yaml
 variable:
-  - name: subscription_id
-    value: YOUR_SUBSCRIPTION_ID
+ - name: subscription_id
+ value: YOUR_SUBSCRIPTION_ID
 ```
 
 ---
@@ -369,9 +369,9 @@ source ~/.bashrc
 **Fix:** Increase `timeout_seconds`:
 ```python
 run_lisa_tests(
-    lisa_path="~/lisa",
-    runbook_path="my_runbook.yml",
-    timeout_seconds=14400   # 4 hours
+ lisa_path="~/lisa",
+ runbook_path="my_runbook.yml",
+ timeout_seconds=14400 # 4 hours
 )
 ```
 
@@ -425,8 +425,8 @@ ls -la ./reports/
 
 # Make sure your runbook has the junit notifier:
 notifier:
-  - type: junit
-    path: ./lisa_results.xml
+ - type: junit
+ path: ./lisa_results.xml
 ```
 
 ---
@@ -480,7 +480,7 @@ pip install -e .
 **Fix:** Add the correct `environment_status` requirement:
 ```python
 requirement=simple_requirement(
-    environment_status=EnvironmentStatus.Deployed
+ environment_status=EnvironmentStatus.Deployed
 )
 ```
 
@@ -538,9 +538,9 @@ find ~/lisa -name "*.py" -exec sed -i 's/\r$//' {} \;
 ```bash
 python3 -c "
 from lisa_mcp.tools.runbook_builder import write_runbook
-write_runbook(yaml_str, '/home/kkashanjat/runbook.yml')   # WSL native
+write_runbook(yaml_str, '/home/kkashanjat/runbook.yml') # WSL native
 "
-cp ~/runbook.yml /mnt/c/Users/kkashanjat/runbook.yml      # copy to Windows
+cp ~/runbook.yml /mnt/c/Users/kkashanjat/runbook.yml # copy to Windows
 ```
 
 ---
@@ -555,7 +555,7 @@ cp ~/runbook.yml /mnt/c/Users/kkashanjat/runbook.yml      # copy to Windows
 ```bash
 az login
 az account set --subscription YOUR_SUBSCRIPTION_ID
-az account show   # verify
+az account show # verify
 ```
 
 ---
@@ -627,13 +627,13 @@ from lisa_mcp.tools.test_discovery import discover_tests
 import json
 
 suites = discover_tests(
-    lisa_path="/home/kkashanjat/lisa",
-    tier="T0",
+ lisa_path="/home/kkashanjat/lisa",
+ tier="T0",
 )
 for s in suites:
-    print(f"{s.name}: {len(s.test_cases)} tests")
-    for tc in s.test_cases:
-        print(f"  [{tc.priority}] {tc.name}")
+ print(f"{s.name}: {len(s.test_cases)} tests")
+ for tc in s.test_cases:
+ print(f" [{tc.priority}] {tc.name}")
 ```
 
 ### Minimal reproduction

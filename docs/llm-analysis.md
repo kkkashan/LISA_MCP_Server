@@ -26,60 +26,60 @@ analyze test failures, determine root causes, and generate rich reports.
 
 ```
 LISA test run output
-        │
-        ▼
+ │
+ ▼
 ┌─────────────────────────────────────┐
-│  Step 1 — Parse results             │
-│  parse_results() → TestRunSummary   │
-│  JUnit XML or console output        │
+│ Step 1 — Parse results │
+│ parse_results() → TestRunSummary │
+│ JUnit XML or console output │
 └──────────────┬──────────────────────┘
-               │
-               ▼
+ │
+ ▼
 ┌─────────────────────────────────────┐
-│  Step 2 — Collect log context       │
-│  collect_run_logs()                 │
-│  Tail-reads per-test .log files     │
-│  Extracts lines near ERROR/FAIL     │
-│  Hard cap: 256 KB per file          │
-│            8,000 chars per test     │
+│ Step 2 — Collect log context │
+│ collect_run_logs() │
+│ Tail-reads per-test .log files │
+│ Extracts lines near ERROR/FAIL │
+│ Hard cap: 256 KB per file │
+│ 8,000 chars per test │
 └──────────────┬──────────────────────┘
-               │
-               ▼
+ │
+ ▼
 ┌─────────────────────────────────────┐
-│  Step 3 — Per-failure analysis      │
-│  For each failed test:              │
-│  analyze_failure() → Azure OpenAI API     │
-│  Uses tool_use for structured JSON  │
-│  Returns FailureAnalysis:           │
-│    • root_cause_category            │
-│    • root_cause_description         │
-│    • recommended_fix                │
-│    • severity (critical/high/…)     │
-│    • relevant_log_lines             │
-│    • confidence (0.0–1.0)           │
+│ Step 3 — Per-failure analysis │
+│ For each failed test: │
+│ analyze_failure() → Azure OpenAI API │
+│ Uses tool_use for structured JSON │
+│ Returns FailureAnalysis: │
+│ • root_cause_category │
+│ • root_cause_description │
+│ • recommended_fix │
+│ • severity (critical/high/…) │
+│ • relevant_log_lines │
+│ • confidence (0.0–1.0) │
 └──────────────┬──────────────────────┘
-               │
-               ▼
+ │
+ ▼
 ┌─────────────────────────────────────┐
-│  Step 4 — Run-level summary         │
-│  analyze_run() → Azure OpenAI API         │
-│  Sends compact digest (not logs)    │
-│  Returns RunAnalysisSummary:        │
-│    • overall_health                 │
-│    • health_score                   │
-│    • failure_patterns               │
-│    • top_priorities                 │
-│    • recommendations                │
-│    • executive_summary              │
+│ Step 4 — Run-level summary │
+│ analyze_run() → Azure OpenAI API │
+│ Sends compact digest (not logs) │
+│ Returns RunAnalysisSummary: │
+│ • overall_health │
+│ • health_score │
+│ • failure_patterns │
+│ • top_priorities │
+│ • recommendations │
+│ • executive_summary │
 └──────────────┬──────────────────────┘
-               │
-               ▼
+ │
+ ▼
 ┌─────────────────────────────────────┐
-│  Step 5 — Report generation         │
-│  generate_html_report()             │
-│  generate_markdown_report()         │
-│  Self-contained HTML (no CDN)       │
-│  GitHub-flavored Markdown           │
+│ Step 5 — Report generation │
+│ generate_html_report() │
+│ generate_markdown_report() │
+│ Self-contained HTML (no CDN) │
+│ GitHub-flavored Markdown │
 └─────────────────────────────────────┘
 ```
 
@@ -138,20 +138,20 @@ Analyze the failures and generate a report at ~/reports/
 The AI calls `generate_analysis_report`:
 ```python
 generate_analysis_report(
-    results_source="~/lisa/lisa_results.xml",
-    api_key="YOUR_AZURE_OPENAI_API_KEY",
-    output_dir="~/reports/",
-    run_dir="~/lisa/runtime/latest",
-    report_base_name="my_run",
+ results_source="~/lisa/lisa_results.xml",
+ api_key="YOUR_AZURE_OPENAI_API_KEY",
+ output_dir="~/reports/",
+ run_dir="~/lisa/runtime/latest",
+ report_base_name="my_run",
 )
 ```
 
 Returns:
 ```json
 {
-  "html_path": "/home/user/reports/my_run.html",
-  "markdown_path": "/home/user/reports/my_run.md",
-  "report": { ... }
+ "html_path": "/home/user/reports/my_run.html",
+ "markdown_path": "/home/user/reports/my_run.md",
+ "report": { ... }
 }
 ```
 
@@ -173,8 +173,8 @@ Here is my LISA run output. Analyze the failures with my API key YOUR_AZURE_OPEN
 The AI calls `analyze_test_run_with_llm`:
 ```python
 analyze_test_run_with_llm(
-    results_source="[PASS] Provisioning...\n[FAIL] StorageVerification...",
-    api_key="YOUR_AZURE_OPENAI_API_KEY",
+ results_source="[PASS] Provisioning...\n[FAIL] StorageVerification...",
+ api_key="YOUR_AZURE_OPENAI_API_KEY",
 )
 ```
 
@@ -192,10 +192,10 @@ Analyze with API key YOUR_AZURE_OPENAI_API_KEY
 The AI calls `analyze_failure_root_cause`:
 ```python
 analyze_failure_root_cause(
-    test_name="StorageVerification.nvme_io_test",
-    failure_message="Expected exit code 0 but got 1",
-    api_key="YOUR_AZURE_OPENAI_API_KEY",
-    log_file_path="~/lisa/logs/StorageVerification/nvme_io_test/console.log",
+ test_name="StorageVerification.nvme_io_test",
+ failure_message="Expected exit code 0 but got 1",
+ api_key="YOUR_AZURE_OPENAI_API_KEY",
+ log_file_path="~/lisa/logs/StorageVerification/nvme_io_test/console.log",
 )
 ```
 
@@ -220,21 +220,21 @@ The AI calls `run_and_analyze` — fully automated end-to-end.
 
 ```json
 {
-  "test_name": "StorageVerification.nvme_io_test",
-  "root_cause_category": "disk_io_error",
-  "root_cause_description": "The NVMe device /dev/nvme0 was not found during test
-    execution. The PCIe enumeration log shows a timeout at boot, suggesting the
-    Azure VM SKU (Standard_D4s_v3) does not provide NVMe storage.",
-  "recommended_fix": "Switch to an Lsv3 or Lv3 series VM for NVMe tests.
-    Verify with: az vm list-skus --location westus3 | grep nvme
-    Alternatively, check if the VM has NVMe: ls /dev/nvme*",
-  "severity": "critical",
-  "relevant_log_lines": [
-    "[  2.345] pcieport: PCIe Bus Error: severity=Corrected",
-    "ERROR: NVMe device not found at /dev/nvme0",
-    "FAILED: assert_that('/dev/nvme0').exists() -> False"
-  ],
-  "confidence": 0.88
+ "test_name": "StorageVerification.nvme_io_test",
+ "root_cause_category": "disk_io_error",
+ "root_cause_description": "The NVMe device /dev/nvme0 was not found during test
+ execution. The PCIe enumeration log shows a timeout at boot, suggesting the
+ Azure VM SKU (Standard_D4s_v3) does not provide NVMe storage.",
+ "recommended_fix": "Switch to an Lsv3 or Lv3 series VM for NVMe tests.
+ Verify with: az vm list-skus --location westus3 | grep nvme
+ Alternatively, check if the VM has NVMe: ls /dev/nvme*",
+ "severity": "critical",
+ "relevant_log_lines": [
+ "[ 2.345] pcieport: PCIe Bus Error: severity=Corrected",
+ "ERROR: NVMe device not found at /dev/nvme0",
+ "FAILED: assert_that('/dev/nvme0').exists() -> False"
+ ],
+ "confidence": 0.88
 }
 ```
 
@@ -242,31 +242,31 @@ The AI calls `run_and_analyze` — fully automated end-to-end.
 
 ```json
 {
-  "overall_health": "critical",
-  "health_score": 0.72,
-  "failure_patterns": [
-    "NVMe storage not enumerated on Standard_D4s_v3",
-    "SR-IOV VF interface timeout on accelerated networking"
-  ],
-  "top_priorities": [
-    "Switch VM SKU to Lsv3 series for all NVMe tests",
-    "Investigate accelerated networking VF timeout",
-    "Review kernel version for SR-IOV fixes"
-  ],
-  "environment_issues": [
-    "Standard_D4s_v3 does not support NVMe — use Lsv3/Lv3"
-  ],
-  "recommendations": [
-    "Update runbook to use Standard_L8s_v3 for storage tests",
-    "Pin kernel to 5.15.0-1040-azure or later",
-    "Add retry logic to SR-IOV VF detection (30s retry, 3 attempts)"
-  ],
-  "executive_summary": "This T1 test run achieved a 72% pass rate with 5 failures,
-    2 of which are critical blockers. The NVMe storage failures are caused by the
-    wrong VM SKU being used — a simple runbook fix will resolve 8 tests. The SR-IOV
-    network failure appears related to a known driver timing issue in kernel 5.14.
-    Recommend updating the runbook VM configuration and upgrading the kernel before
-    the next run."
+ "overall_health": "critical",
+ "health_score": 0.72,
+ "failure_patterns": [
+ "NVMe storage not enumerated on Standard_D4s_v3",
+ "SR-IOV VF interface timeout on accelerated networking"
+ ],
+ "top_priorities": [
+ "Switch VM SKU to Lsv3 series for all NVMe tests",
+ "Investigate accelerated networking VF timeout",
+ "Review kernel version for SR-IOV fixes"
+ ],
+ "environment_issues": [
+ "Standard_D4s_v3 does not support NVMe — use Lsv3/Lv3"
+ ],
+ "recommendations": [
+ "Update runbook to use Standard_L8s_v3 for storage tests",
+ "Pin kernel to 5.15.0-1040-azure or later",
+ "Add retry logic to SR-IOV VF detection (30s retry, 3 attempts)"
+ ],
+ "executive_summary": "This T1 test run achieved a 72% pass rate with 5 failures,
+ 2 of which are critical blockers. The NVMe storage failures are caused by the
+ wrong VM SKU being used — a simple runbook fix will resolve 8 tests. The SR-IOV
+ network failure appears related to a known driver timing issue in kernel 5.14.
+ Recommend updating the runbook VM configuration and upgrading the kernel before
+ the next run."
 }
 ```
 
@@ -351,17 +351,17 @@ Severity determines card color in the HTML report and sort order.
 When `run_dir` is provided, the log collector:
 
 1. **Walks** standard LISA output directories:
-   - `<run_dir>/logs/<SuiteName>/<test_method>/`
-   - `<run_dir>/runtime/<timestamp>/<test_name>/`
+ - `<run_dir>/logs/<SuiteName>/<test_method>/`
+ - `<run_dir>/runtime/<timestamp>/<test_name>/`
 
 2. **Tail-reads** each `.log` file (last 256 KB only — never loads whole file)
 
 3. **Scans** for lines matching these error patterns:
-   ```
-   ERROR, FAILED, EXCEPTION, Traceback, AssertionError,
-   CRITICAL, PANIC, exit code [non-zero], returncode, timeout,
-   permission denied, connection refused, no such file
-   ```
+ ```
+ ERROR, FAILED, EXCEPTION, Traceback, AssertionError,
+ CRITICAL, PANIC, exit code [non-zero], returncode, timeout,
+ permission denied, connection refused, no such file
+ ```
 
 4. **Extracts** 15 lines of context before and after each error signal
 
@@ -384,35 +384,35 @@ If `run_dir` contains no log files:
 
 ```
 1. run_tests(lisa_path, runbook_path, variables)
-        │
-        ▼
+ │
+ ▼
 2. Find results: look for lisa_results.xml in
-   - <lisa_path>/runtime/<latest>/
-   - <lisa_path>/runs/<latest>/
-   - Current working directory
-   Fallback: use stdout as results_source
-        │
-        ▼
+ - <lisa_path>/runtime/<latest>/
+ - <lisa_path>/runs/<latest>/
+ - Current working directory
+ Fallback: use stdout as results_source
+ │
+ ▼
 3. generate_analysis_report(results_source, api_key, output_dir, run_dir)
-        │
-        ▼
+ │
+ ▼
 4. Return: {
-     run_result: { success, returncode, command },
-     summary_line: "CRITICAL | 13/18 passed (72.2%) | 5 failed",
-     html_path: "/path/to/lisa_analysis.html",
-     markdown_path: "/path/to/lisa_analysis.md",
-     report: { ... full AnalysisReport ... }
-   }
+ run_result: { success, returncode, command },
+ summary_line: "CRITICAL | 13/18 passed (72.2%) | 5 failed",
+ html_path: "/path/to/lisa_analysis.html",
+ markdown_path: "/path/to/lisa_analysis.md",
+ report: { ... full AnalysisReport ... }
+ }
 ```
 
 ### Example conversation
 
 ```
 Run the runbook ~/runbooks/rhel9_t1.yml with:
-  - LISA at ~/lisa
-  - subscription_id: xxxx
-  - admin_private_key_file: ~/.ssh/lisa_key
-  - Azure OpenAI API key: YOUR_AZURE_OPENAI_API_KEY
+ - LISA at ~/lisa
+ - subscription_id: xxxx
+ - admin_private_key_file: ~/.ssh/lisa_key
+ - Azure OpenAI API key: YOUR_AZURE_OPENAI_API_KEY
 Save reports to ~/reports/rhel9_t1/
 ```
 
@@ -423,17 +423,17 @@ The AI calls `run_and_analyze` and returns:
 Health: DEGRADED | 15/18 passed (83.3%) | 3 failed
 
 Reports:
-  HTML:     ~/reports/rhel9_t1/lisa_analysis.html
-  Markdown: ~/reports/rhel9_t1/lisa_analysis.md
+ HTML: ~/reports/rhel9_t1/lisa_analysis.html
+ Markdown: ~/reports/rhel9_t1/lisa_analysis.md
 
 Top failures:
-  1. [CRITICAL] CoreTest.verify_kdump — kdump service not found on RHEL 9.2
-  2. [HIGH] NetworkTest.verify_sriov — SR-IOV VF timeout
-  3. [MEDIUM] StorageTest.verify_swap — swap not enabled by default
+ 1. [CRITICAL] CoreTest.verify_kdump — kdump service not found on RHEL 9.2
+ 2. [HIGH] NetworkTest.verify_sriov — SR-IOV VF timeout
+ 3. [MEDIUM] StorageTest.verify_swap — swap not enabled by default
 
 Executive summary:
-  83% of T1 tests passed with 3 failures. The kdump failure is critical for
-  kernel crash collection and should be fixed before image publication...
+ 83% of T1 tests passed with 3 failures. The kdump failure is critical for
+ kernel crash collection and should be fixed before image publication...
 ```
 
 ---
@@ -454,9 +454,9 @@ Approximate costs (February 2026 pricing for gpt-4o):
 Use `max_failures_to_analyze` to cap the number of LLM calls:
 ```python
 analyze_test_run_with_llm(
-    results_source="lisa_results.xml",
-    api_key="YOUR_AZURE_OPENAI_API_KEY",
-    max_failures_to_analyze=5,  # only analyze the 5 worst failures
+ results_source="lisa_results.xml",
+ api_key="YOUR_AZURE_OPENAI_API_KEY",
+ max_failures_to_analyze=5, # only analyze the 5 worst failures
 )
 ```
 
@@ -471,38 +471,38 @@ Sort by severity in post-processing if needed.
 
 ```yaml
 - name: Run LISA T1 tests
-  run: |
-    lisa -r runbook.yml \
-         -v subscription_id=${{ secrets.AZURE_SUB_ID }} \
-         -v admin_private_key_file=/tmp/lisa_key
+ run: |
+ lisa -r runbook.yml \
+ -v subscription_id=${{ secrets.AZURE_SUB_ID }} \
+ -v admin_private_key_file=/tmp/lisa_key
 
 - name: Analyze failures with the AI
-  if: always()   # run even if tests failed
-  run: |
-    python3 -c "
-    import json
-    from lisa_mcp.tools.result_parser import parse_junit_xml
-    from lisa_mcp.server import generate_analysis_report
+ if: always() # run even if tests failed
+ run: |
+ python3 -c "
+ import json
+ from lisa_mcp.tools.result_parser import parse_junit_xml
+ from lisa_mcp.server import generate_analysis_report
 
-    result = generate_analysis_report(
-        results_source='./lisa_results.xml',
-        api_key='${{ secrets.AZURE_OPENAI_API_KEY }}',
-        output_dir='./reports/',
-        run_dir='.',
-    )
-    data = json.loads(result)
-    report = data['report']
-    health = report['summary']['overall_health'].upper()
-    print(f'Health: {health}')
-    print(f'Summary: {report[\"summary\"][\"executive_summary\"]}')
-    "
+ result = generate_analysis_report(
+ results_source='./lisa_results.xml',
+ api_key='${{ secrets.AZURE_OPENAI_API_KEY }}',
+ output_dir='./reports/',
+ run_dir='.',
+ )
+ data = json.loads(result)
+ report = data['report']
+ health = report['summary']['overall_health'].upper()
+ print(f'Health: {health}')
+ print(f'Summary: {report[\"summary\"][\"executive_summary\"]}')
+ "
 
 - name: Upload analysis report
-  if: always()
-  uses: actions/upload-artifact@v4
-  with:
-    name: lisa-analysis-${{ github.run_id }}
-    path: reports/
+ if: always()
+ uses: actions/upload-artifact@v4
+ with:
+ name: lisa-analysis-${{ github.run_id }}
+ path: reports/
 ```
 
 ### Post analysis in a GitHub comment (on PR)
@@ -530,6 +530,6 @@ comment = f"""## LISA Test Analysis — {summary['overall_health'].upper()}
 
 # Post via gh CLI
 subprocess.run([
-    "gh", "pr", "comment", "--body", comment
+ "gh", "pr", "comment", "--body", comment
 ])
 ```

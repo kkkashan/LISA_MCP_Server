@@ -7,19 +7,19 @@ Complete reference for all 13 tools, 3 resources, and 3 prompts exposed by the s
 ## Table of Contents
 
 - [Tools](#tools)
-  - [discover_test_cases](#1-discover_test_cases)
-  - [list_test_areas](#2-list_test_areas)
-  - [get_test_case_details](#3-get_test_case_details)
-  - [search_tests](#4-search_tests)
-  - [generate_test_suite_code](#5-generate_test_suite_code)
-  - [build_runbook](#6-build_runbook)
-  - [build_tier_runbook_file](#7-build_tier_runbook_file)
-  - [validate_runbook_file](#8-validate_runbook_file)
-  - [add_test_to_existing_runbook](#9-add_test_to_existing_runbook)
-  - [run_lisa_tests](#10-run_lisa_tests)
-  - [parse_test_results](#11-parse_test_results)
-  - [check_lisa_environment](#12-check_lisa_environment)
-  - [get_tier_info](#13-get_tier_info)
+ - [discover_test_cases](#1-discover_test_cases)
+ - [list_test_areas](#2-list_test_areas)
+ - [get_test_case_details](#3-get_test_case_details)
+ - [search_tests](#4-search_tests)
+ - [generate_test_suite_code](#5-generate_test_suite_code)
+ - [build_runbook](#6-build_runbook)
+ - [build_tier_runbook_file](#7-build_tier_runbook_file)
+ - [validate_runbook_file](#8-validate_runbook_file)
+ - [add_test_to_existing_runbook](#9-add_test_to_existing_runbook)
+ - [run_lisa_tests](#10-run_lisa_tests)
+ - [parse_test_results](#11-parse_test_results)
+ - [check_lisa_environment](#12-check_lisa_environment)
+ - [get_tier_info](#13-get_tier_info)
 - [Resources](#resources)
 - [Prompts](#prompts)
 
@@ -52,37 +52,37 @@ Uses **Python AST parsing** — never imports LISA modules, so no LISA installat
 JSON object:
 ```json
 {
-  "total_suites": 3,
-  "total_test_cases": 18,
-  "truncated": false,
-  "filters": { "area": "network", "tier": "T1", ... },
-  "suites": [
-    {
-      "suite": "NetworkConnectivity",
-      "area": "network",
-      "category": "functional",
-      "description": "...",
-      "owner": "Microsoft",
-      "file": "/home/user/lisa/lisa/microsoft/testsuites/network.py",
-      "test_cases": [
-        {
-          "name": "NetworkConnectivity.verify_ping",
-          "method": "verify_ping",
-          "priority": 0,
-          "description": "Verifies ICMP connectivity",
-          "timeout": 300,
-          "use_new_environment": false,
-          "requirement": {
-            "min_core_count": null,
-            "supported_features": [],
-            "unsupported_os": [],
-            "supported_platform_type": ["AZURE"]
-          },
-          "tags": []
-        }
-      ]
-    }
-  ]
+ "total_suites": 3,
+ "total_test_cases": 18,
+ "truncated": false,
+ "filters": { "area": "network", "tier": "T1", ... },
+ "suites": [
+ {
+ "suite": "NetworkConnectivity",
+ "area": "network",
+ "category": "functional",
+ "description": "...",
+ "owner": "Microsoft",
+ "file": "/home/user/lisa/lisa/microsoft/testsuites/network.py",
+ "test_cases": [
+ {
+ "name": "NetworkConnectivity.verify_ping",
+ "method": "verify_ping",
+ "priority": 0,
+ "description": "Verifies ICMP connectivity",
+ "timeout": 300,
+ "use_new_environment": false,
+ "requirement": {
+ "min_core_count": null,
+ "supported_features": [],
+ "unsupported_os": [],
+ "supported_platform_type": ["AZURE"]
+ },
+ "tags": []
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -109,8 +109,8 @@ Return all unique functional area names in a LISA repository.
 
 ```json
 {
-  "areas": ["cpu", "core", "hyperv", "memory", "network", "nvme", "storage", ...],
-  "count": 18
+ "areas": ["cpu", "core", "hyperv", "memory", "network", "nvme", "storage", ...],
+ "count": 18
 }
 ```
 
@@ -143,35 +143,35 @@ Full `TestCaseInfo` JSON (all fields) on success, or:
 
 ```
 get_test_case_details(
-    lisa_path="~/lisa",
-    test_name="Provisioning.smoke_test"
+ lisa_path="~/lisa",
+ test_name="Provisioning.smoke_test"
 )
 ```
 
 Returns:
 ```json
 {
-  "name": "Provisioning.smoke_test",
-  "method_name": "smoke_test",
-  "suite_name": "Provisioning",
-  "file_path": "/home/user/lisa/lisa/microsoft/testsuites/provisioning.py",
-  "area": "provisioning",
-  "category": "functional",
-  "description": "Verifies the VM is accessible and operational after deployment",
-  "priority": 0,
-  "timeout": 3600,
-  "use_new_environment": false,
-  "requirement": {
-    "min_core_count": null,
-    "min_memory_mb": null,
-    "min_disk_space_gb": null,
-    "supported_features": [],
-    "unsupported_os": [],
-    "supported_platform_type": ["AZURE"],
-    "environment_status": "Deployed"
-  },
-  "tags": [],
-  "owner": "Microsoft"
+ "name": "Provisioning.smoke_test",
+ "method_name": "smoke_test",
+ "suite_name": "Provisioning",
+ "file_path": "/home/user/lisa/lisa/microsoft/testsuites/provisioning.py",
+ "area": "provisioning",
+ "category": "functional",
+ "description": "Verifies the VM is accessible and operational after deployment",
+ "priority": 0,
+ "timeout": 3600,
+ "use_new_environment": false,
+ "requirement": {
+ "min_core_count": null,
+ "min_memory_mb": null,
+ "min_disk_space_gb": null,
+ "supported_features": [],
+ "unsupported_os": [],
+ "supported_platform_type": ["AZURE"],
+ "environment_status": "Deployed"
+ },
+ "tags": [],
+ "owner": "Microsoft"
 }
 ```
 
@@ -195,20 +195,20 @@ Free-text search across test case names and descriptions with relevance scoring.
 
 ```json
 {
-  "query": "nvme performance",
-  "total_matches": 7,
-  "results": [
-    {
-      "name": "NvmeTest.nvme_basic_io",
-      "suite": "NvmeTest",
-      "area": "nvme",
-      "priority": 1,
-      "description": "Verifies NVMe disk basic I/O operations and throughput",
-      "file": "/home/user/lisa/lisa/microsoft/testsuites/nvme.py",
-      "score": 5
-    },
-    ...
-  ]
+ "query": "nvme performance",
+ "total_matches": 7,
+ "results": [
+ {
+ "name": "NvmeTest.nvme_basic_io",
+ "suite": "NvmeTest",
+ "area": "nvme",
+ "priority": 1,
+ "description": "Verifies NVMe disk basic I/O operations and throughput",
+ "file": "/home/user/lisa/lisa/microsoft/testsuites/nvme.py",
+ "score": 5
+ },
+ ...
+ ]
 }
 ```
 
@@ -267,7 +267,7 @@ JSON with `code` (the Python source string) and optionally `written_to` (the pat
 
 ```json
 {
-  "code": "# Generated test suite file: kvptests.py\n..."
+ "code": "# Generated test suite file: kvptests.py\n..."
 }
 ```
 
@@ -298,8 +298,8 @@ Generate a complete LISA runbook YAML configuration file.
 
 ```json
 {
-  "yaml": "# LISA Runbook...\nname: ...\n...",
-  "written_to": "/home/user/runbooks/my_runbook.yml"  // if output_path given
+ "yaml": "# LISA Runbook...\nname: ...\n...",
+ "written_to": "/home/user/runbooks/my_runbook.yml" // if output_path given
 }
 ```
 
@@ -323,9 +323,9 @@ One-step convenience: build a standard T0–T4 tier runbook with sensible defaul
 
 ```json
 {
-  "tier": "T1",
-  "yaml": "...",
-  "written_to": "/path/if/output_path/given"
+ "tier": "T1",
+ "yaml": "...",
+ "written_to": "/path/if/output_path/given"
 }
 ```
 
@@ -345,20 +345,20 @@ Parse and validate a LISA runbook YAML file for errors and warnings.
 
 ```json
 {
-  "valid": true,
-  "errors": [],
-  "warnings": [
-    "Variable '$(subscription_id)' referenced but not defined — pass via -v on the CLI."
-  ],
-  "summary": {
-    "name": "My Runbook",
-    "concurrency": 2,
-    "platform_types": ["azure"],
-    "test_criteria_count": 2,
-    "variable_count": 1,
-    "notifiers": ["console", "html"],
-    "import_builtin_tests": true
-  }
+ "valid": true,
+ "errors": [],
+ "warnings": [
+ "Variable '$(subscription_id)' referenced but not defined — pass via -v on the CLI."
+ ],
+ "summary": {
+ "name": "My Runbook",
+ "concurrency": 2,
+ "platform_types": ["azure"],
+ "test_criteria_count": 2,
+ "variable_count": 1,
+ "notifiers": ["console", "html"],
+ "import_builtin_tests": true
+ }
 }
 ```
 
@@ -390,8 +390,8 @@ Add a test inclusion or exclusion criterion to an existing runbook file in-place
 
 ```json
 {
-  "message": "Added 'smoke_test' (include) to ~/my_runbook.yml",
-  "yaml": "... updated YAML content ..."
+ "message": "Added 'smoke_test' (include) to ~/my_runbook.yml",
+ "yaml": "... updated YAML content ..."
 }
 ```
 
@@ -426,11 +426,11 @@ Execute LISA tests by running the `lisa` CLI as a subprocess.
 
 ```json
 {
-  "success": true,
-  "returncode": 0,
-  "stdout": "... full LISA output ...",
-  "stderr": "",
-  "command": "lisa -r ~/my_runbook.yml -v subscription_id:xxxx ..."
+ "success": true,
+ "returncode": 0,
+ "stdout": "... full LISA output ...",
+ "stderr": "",
+ "command": "lisa -r ~/my_runbook.yml -v subscription_id:xxxx ..."
 }
 ```
 
@@ -463,24 +463,24 @@ Auto-detection:
 
 ```json
 {
-  "summary_line": "Total: 45 | Passed: 42 (93.3%) | Failed: 3 | Skipped: 0 | Errors: 0 | Duration: 312.5s",
-  "total": 45,
-  "passed": 42,
-  "failed": 3,
-  "skipped": 0,
-  "errors": 0,
-  "duration_seconds": 312.5,
-  "results": [
-    {
-      "name": "StorageVerification.nvme_io_test",
-      "status": "failed",
-      "duration_seconds": 120.5,
-      "message": "Expected exit code 0 but got 1",
-      "stack_trace": "...",
-      "suite_name": "StorageVerification"
-    },
-    ...
-  ]
+ "summary_line": "Total: 45 | Passed: 42 (93.3%) | Failed: 3 | Skipped: 0 | Errors: 0 | Duration: 312.5s",
+ "total": 45,
+ "passed": 42,
+ "failed": 3,
+ "skipped": 0,
+ "errors": 0,
+ "duration_seconds": 312.5,
+ "results": [
+ {
+ "name": "StorageVerification.nvme_io_test",
+ "status": "failed",
+ "duration_seconds": 120.5,
+ "message": "Expected exit code 0 but got 1",
+ "stack_trace": "...",
+ "suite_name": "StorageVerification"
+ },
+ ...
+ ]
 }
 ```
 
@@ -508,16 +508,16 @@ None.
 ```json
 // LISA installed:
 {
-  "installed": true,
-  "path": "/home/user/.local/bin/lisa",
-  "version_output": "LISA v0.1.0"
+ "installed": true,
+ "path": "/home/user/.local/bin/lisa",
+ "version_output": "LISA v0.1.0"
 }
 
 // LISA not installed:
 {
-  "installed": false,
-  "path": null,
-  "version_output": ""
+ "installed": false,
+ "path": null,
+ "version_output": ""
 }
 ```
 
@@ -535,31 +535,31 @@ None.
 
 ```json
 {
-  "T0": {
-    "priorities": [0],
-    "description": "P0 (critical) tests only — smoke tests, ~5 minutes, 1 environment",
-    "use_case": "Fast gate-check before merge or image publishing"
-  },
-  "T1": {
-    "priorities": [0, 1],
-    "description": "P0–P1 tests — ~2 hours, up to 2 environments",
-    "use_case": "Daily CI runs and pre-release validation"
-  },
-  "T2": {
-    "priorities": [0, 1, 2],
-    "description": "P0–P2 tests — ~8 hours, up to 2 environments",
-    "use_case": "Weekly regression suites"
-  },
-  "T3": {
-    "priorities": [0, 1, 2, 3],
-    "description": "P0–P3 tests — ~16 hours",
-    "use_case": "Full pre-GA validation"
-  },
-  "T4": {
-    "priorities": [0, 1, 2, 3, 4, 5],
-    "description": "All tests including community/informational",
-    "use_case": "Complete compliance and certification runs"
-  }
+ "T0": {
+ "priorities": [0],
+ "description": "P0 (critical) tests only — smoke tests, ~5 minutes, 1 environment",
+ "use_case": "Fast gate-check before merge or image publishing"
+ },
+ "T1": {
+ "priorities": [0, 1],
+ "description": "P0–P1 tests — ~2 hours, up to 2 environments",
+ "use_case": "Daily CI runs and pre-release validation"
+ },
+ "T2": {
+ "priorities": [0, 1, 2],
+ "description": "P0–P2 tests — ~8 hours, up to 2 environments",
+ "use_case": "Weekly regression suites"
+ },
+ "T3": {
+ "priorities": [0, 1, 2, 3],
+ "description": "P0–P3 tests — ~16 hours",
+ "use_case": "Full pre-GA validation"
+ },
+ "T4": {
+ "priorities": [0, 1, 2, 3, 4, 5],
+ "description": "All tests including community/informational",
+ "use_case": "Complete compliance and certification runs"
+ }
 }
 ```
 

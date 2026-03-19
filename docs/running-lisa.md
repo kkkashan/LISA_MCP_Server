@@ -21,9 +21,9 @@ This guide walks you through every step needed to run Microsoft LISA tests — f
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
-    python3 python3-pip python3-venv \
-    git curl openssh-client \
-    libssl-dev libffi-dev build-essential
+ python3 python3-pip python3-venv \
+ git curl openssh-client \
+ libssl-dev libffi-dev build-essential
 ```
 
 Install the Azure CLI (needed for cloud tests):
@@ -35,8 +35,8 @@ curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 Verify installs:
 
 ```bash
-python3 --version   # Python 3.10+
-az --version        # azure-cli 2.x
+python3 --version # Python 3.10+
+az --version # azure-cli 2.x
 git --version
 ```
 
@@ -123,21 +123,21 @@ name: my_first_run
 description: "First LISA test run on Azure"
 
 extension:
-  - name: lisa.microsoft.azure
+ - name: lisa.microsoft.azure
 
 platform:
-  - type: azure
-    admin_username: lisauser
-    admin_private_key_file: "~/.ssh/lisa_id_rsa"
-    subscription_id: "$(subscription_id)"    # passed via -v flag
-    resource_group_name: "lisa-test-rg"
-    location: "eastus"
-    vm_type: "Standard_D2s_v3"
+ - type: azure
+ admin_username: lisauser
+ admin_private_key_file: "~/.ssh/lisa_id_rsa"
+ subscription_id: "$(subscription_id)" # passed via -v flag
+ resource_group_name: "lisa-test-rg"
+ location: "eastus"
+ vm_type: "Standard_D2s_v3"
 
 testcase:
-  - criteria:
-      priority: 0              # P0 = most critical smoke tests
-      area: smoke              # only the smoke area
+ - criteria:
+ priority: 0 # P0 = most critical smoke tests
+ area: smoke # only the smoke area
 ```
 
 > See [docs/runbook-guide.md](runbook-guide.md) for the full YAML reference and all available options.
@@ -150,7 +150,7 @@ Basic run command:
 
 ```bash
 lisa -r my_first_runbook.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
 ```
 
 ### What happens during a run
@@ -182,8 +182,8 @@ LISA prints a live table to stdout:
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│  Test Results                                         │
-│  Passed: 18   Failed: 2   Skipped: 3   Total: 23     │
+│ Test Results │
+│ Passed: 18 Failed: 2 Skipped: 3 Total: 23 │
 └───────────────────────────────────────────────────────┘
 ```
 
@@ -194,15 +194,15 @@ After the run, find everything under `runtime/`:
 ```
 runtime/
 ├── <run-id>/
-│   ├── lisa.log                    # main LISA log
-│   ├── environment/
-│   │   └── <env-id>/
-│   │       ├── setup.log
-│   │       └── <test-name>/
-│   │           ├── test.log        # per-test logs
-│   │           └── results.xml     # JUnit XML
-│   └── report/
-│       └── junit.xml               # aggregate JUnit report
+│ ├── lisa.log # main LISA log
+│ ├── environment/
+│ │ └── <env-id>/
+│ │ ├── setup.log
+│ │ └── <test-name>/
+│ │ ├── test.log # per-test logs
+│ │ └── results.xml # JUnit XML
+│ └── report/
+│ └── junit.xml # aggregate JUnit report
 ```
 
 Open the JUnit XML in any CI system or IDE test reporter.
@@ -214,10 +214,10 @@ If you are using the LISA MCP server, generate an HTML report:
 ```python
 # In your MCP client (e.g., the AI Desktop)
 analyze_test_run_with_llm(
-    junit_xml_path="runtime/<run-id>/report/junit.xml",
-    log_dir="runtime/<run-id>",
-    api_key="YOUR_AZURE_OPENAI_API_KEY",
-    output_dir="reports/"
+ junit_xml_path="runtime/<run-id>/report/junit.xml",
+ log_dir="runtime/<run-id>",
+ api_key="YOUR_AZURE_OPENAI_API_KEY",
+ output_dir="reports/"
 )
 ```
 
@@ -231,8 +231,8 @@ This produces `reports/report.html` and `reports/report.md`.
 
 ```bash
 lisa -r my_first_runbook.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
-     -v "testcase.0.criteria.name:verify_disk_io"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
+ -v "testcase.0.criteria.name:verify_disk_io"
 ```
 
 ### Run a different OS image
@@ -241,8 +241,8 @@ Add image override:
 
 ```bash
 lisa -r my_first_runbook.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
-     -v "platform.0.marketplace_image:Canonical UbuntuServer 22_04-lts-gen2 latest"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
+ -v "platform.0.marketplace_image:Canonical UbuntuServer 22_04-lts-gen2 latest"
 ```
 
 ### Run a different tier
@@ -252,8 +252,8 @@ Change priority in the runbook or override:
 ```bash
 # Run T1 (P0+P1) tests
 lisa -r my_first_runbook.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
-     -v "testcase.0.criteria.priority:[0,1]"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID" \
+ -v "testcase.0.criteria.priority:[0,1]"
 ```
 
 ### Debug mode — keep VM alive after failure
@@ -282,16 +282,16 @@ LISA ships with ready-made runbooks for common scenarios:
 ls microsoft/runbook/
 
 # Examples:
-microsoft/runbook/azure_tier0.yml     # P0 smoke tests on Azure
-microsoft/runbook/azure_tier1.yml     # P0+P1 tests on Azure
-microsoft/runbook/stress.yml          # stress/performance tests
+microsoft/runbook/azure_tier0.yml # P0 smoke tests on Azure
+microsoft/runbook/azure_tier1.yml # P0+P1 tests on Azure
+microsoft/runbook/stress.yml # stress/performance tests
 ```
 
 Run a built-in runbook:
 
 ```bash
 lisa -r microsoft/runbook/azure_tier0.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
 ```
 
 ---
@@ -342,12 +342,12 @@ Add to `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
-    "lisa": {
-      "command": "lisa-mcp",
-      "args": []
-    }
-  }
+ "mcpServers": {
+ "lisa": {
+ "command": "lisa-mcp",
+ "args": []
+ }
+ }
 }
 ```
 
@@ -377,7 +377,7 @@ lisa --help
 
 # 3. Run P0 smoke tests
 lisa -r microsoft/runbook/azure_tier0.yml \
-     -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
+ -v subscription_id:"$AZURE_SUBSCRIPTION_ID"
 
 # 4. Run specific test
 lisa -r my_runbook.yml -v "testcase.0.criteria.name:verify_network_basic"

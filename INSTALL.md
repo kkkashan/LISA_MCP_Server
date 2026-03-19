@@ -12,7 +12,7 @@ This guide covers installation on every supported platform: Windows (WSL2), Ubun
 4. [Install on Fedora / RHEL / CentOS](#4-install-on-fedora--rhel--centos)
 5. [Install on macOS](#5-install-on-macos)
 6. [Install the LISA framework itself](#6-install-the-lisa-framework-itself)
-7. [Register the MCP server with VS Code](#7-register-the-mcp-server-with-the AI-code)
+7. [Register the MCP server with VS Code](#7-register-the-mcp-server-with-vs-code)
 8. [Verify the installation](#8-verify-the-installation)
 9. [Upgrading](#9-upgrading)
 10. [Uninstalling](#10-uninstalling)
@@ -34,11 +34,14 @@ This guide covers installation on every supported platform: Windows (WSL2), Ubun
 - SSH key pair for VM access
 - LISA installed (`pip install -e ~/lisa`)
 
+**For AI failure analysis** (optional):
+- Azure OpenAI API key
+
 ---
 
 ## 2. Install on Windows via WSL2
 
-This project is developed on WSL2 (the environment in use). Follow these steps exactly.
+This project is developed on WSL2. Follow these steps exactly.
 
 ### 2a. Enable WSL2 (if not already done)
 
@@ -90,7 +93,7 @@ curl -sS https://bootstrap.pypa.io/get-pip.py | python3 --user
 git clone https://github.com/microsoft/lisa.git ~/lisa
 
 # Clone this MCP server
-git clone <this-repo-url> ~/lisa-mcp-server
+git clone https://github.com/kkkashan/LISA_MCP_Server.git ~/lisa-mcp-server
 
 # Install the MCP server
 cd ~/lisa-mcp-server
@@ -113,11 +116,11 @@ sudo apt-get update
 sudo apt-get install -y python3 python3-pip python3-venv git
 
 # 2. Verify Python version
-python3 --version   # must be 3.10 or later
+python3 --version # must be 3.10 or later
 
 # 3. Clone repos
 git clone https://github.com/microsoft/lisa.git ~/lisa
-git clone <this-repo-url> ~/lisa-mcp-server
+git clone https://github.com/kkkashan/LISA_MCP_Server.git ~/lisa-mcp-server
 
 # 4. (Recommended) create a virtual environment
 python3 -m venv ~/lisa-mcp-server/.venv
@@ -145,7 +148,7 @@ python3 --version
 
 # 3. Clone repos
 git clone https://github.com/microsoft/lisa.git ~/lisa
-git clone <this-repo-url> ~/lisa-mcp-server
+git clone https://github.com/kkkashan/LISA_MCP_Server.git ~/lisa-mcp-server
 
 # 4. Virtual environment (recommended)
 python3 -m venv ~/lisa-mcp-server/.venv
@@ -172,7 +175,7 @@ python3 --version
 
 # 4. Clone repos
 git clone https://github.com/microsoft/lisa.git ~/lisa
-git clone <this-repo-url> ~/lisa-mcp-server
+git clone https://github.com/kkkashan/LISA_MCP_Server.git ~/lisa-mcp-server
 
 # 5. Virtual environment (recommended)
 python3 -m venv ~/lisa-mcp-server/.venv
@@ -207,12 +210,12 @@ LISA needs some additional packages for test execution:
 
 ```bash
 sudo apt-get install -y \
-    gcc \
-    libssl-dev \
-    libffi-dev \
-    build-essential \
-    sshpass \
-    openssh-client
+ gcc \
+ libssl-dev \
+ libffi-dev \
+ build-essential \
+ sshpass \
+ openssh-client
 ```
 
 ### Azure credentials setup (for Azure tests)
@@ -235,16 +238,13 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/lisa_id_rsa -N ""
 
 ## 7. Register the MCP server with VS Code
 
-### Step 1 — Find the settings file
+The repository ships with `.vscode/mcp.json` already configured. When you open
+the workspace in VS Code it will detect the server automatically and show a
+**Start** button.
 
-```bash
-# The MCP servers configuration file
-ls .vscode/mcp.json 2>/dev/null || echo "File does not exist yet"
-```
+### Manual setup
 
-### Step 2 — Create or update the file
-
-Replace `/home/YOUR_USER/lisa-mcp-server` with your actual path from `pwd`:
+If you cloned to a custom location, update `.vscode/mcp.json`:
 
 ```bash
 # Get the absolute path
@@ -252,78 +252,66 @@ REPO_PATH=$(cd ~/lisa-mcp-server && pwd)
 echo "Use this path: $REPO_PATH"
 ```
 
-Create `.vscode/mcp.json`:
+Edit `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
-    "lisa": {
-      "command": "python3",
-      "args": ["-m", "lisa_mcp.server"],
-      "cwd": "/home/YOUR_USER/lisa-mcp-server",
-      "env": {}
-    }
-  }
+ "servers": {
+ "lisa": {
+ "command": "python3",
+ "args": ["-m", "lisa_mcp.server"],
+ "cwd": "/home/YOUR_USER/lisa-mcp-server"
+ }
+ }
 }
 ```
 
-### Step 3 — If using a virtual environment
+### If using a virtual environment
 
-When using a venv, point `command` to the venv's Python:
+Point `command` to the venv's Python:
 
 ```json
 {
-  "mcpServers": {
-    "lisa": {
-      "command": "/home/YOUR_USER/lisa-mcp-server/.venv/bin/python3",
-      "args": ["-m", "lisa_mcp.server"],
-      "cwd": "/home/YOUR_USER/lisa-mcp-server",
-      "env": {}
-    }
-  }
+ "servers": {
+ "lisa": {
+ "command": "/home/YOUR_USER/lisa-mcp-server/.venv/bin/python3",
+ "args": ["-m", "lisa_mcp.server"],
+ "cwd": "/home/YOUR_USER/lisa-mcp-server"
+ }
+ }
 }
 ```
 
-### Step 4 — If you already have other MCP servers
+### If you already have other MCP servers
 
-Merge the `lisa` key into your existing `mcpServers` object:
+Merge the `lisa` key into your existing `servers` object:
 
 ```json
 {
-  "mcpServers": {
-    "existing-server": { "...": "..." },
-    "lisa": {
-      "command": "python3",
-      "args": ["-m", "lisa_mcp.server"],
-      "cwd": "/home/YOUR_USER/lisa-mcp-server"
-    }
-  }
+ "servers": {
+ "existing-server": { "...": "..." },
+ "lisa": {
+ "command": "python3",
+ "args": ["-m", "lisa_mcp.server"],
+ "cwd": "/home/YOUR_USER/lisa-mcp-server"
+ }
+ }
 }
 ```
 
-### Step 5 — Restart VS Code
+### Starting the server
 
-```bash
-# Exit any running VS Code session
-# Then start fresh:
-the AI
-```
+Open the Command Palette in VS Code → **MCP: Start Server** → **lisa**.
+
+Or click the **Start** CodeLens button that appears above the server entry in `.vscode/mcp.json`.
 
 ---
 
 ## 8. Verify the installation
 
-### Check MCP connectivity
-
-In VS Code, run:
-
-```
-/mcp
-```
-
-Expected output includes `lisa` in the server list with status `connected`.
-
 ### Test a tool directly
+
+In VS Code Copilot Chat:
 
 ```
 Using the LISA MCP server, call check_lisa_environment
@@ -333,11 +321,13 @@ Expected:
 
 ```json
 {
-  "installed": false,   // or true if LISA is installed
-  "path": null,
-  "version_output": ""
+ "installed": false,
+ "path": null,
+ "version_output": ""
 }
 ```
+
+(`installed: true` if LISA is installed.)
 
 ### Test discovery (no LISA needed)
 
@@ -350,14 +340,13 @@ Expected: a JSON list of area names like `["network", "storage", "cpu", ...]`.
 ### Full smoke test
 
 ```bash
-# Run this in a terminal to confirm everything is wired correctly
 python3 -c "
 from lisa_mcp.server import mcp
 tools = mcp._tool_manager.list_tools()
 print(f'Server: {mcp.name}')
 print(f'Tools registered: {len(tools)}')
 for t in tools:
-    print(f'  {t.name}')
+ print(f' {t.name}')
 "
 ```
 
@@ -365,20 +354,24 @@ Expected output:
 
 ```
 Server: lisa-mcp-server
-Tools registered: 13
-  discover_test_cases
-  list_test_areas
-  get_test_case_details
-  search_tests
-  generate_test_suite_code
-  build_runbook
-  build_tier_runbook_file
-  validate_runbook_file
-  add_test_to_existing_runbook
-  run_lisa_tests
-  parse_test_results
-  check_lisa_environment
-  get_tier_info
+Tools registered: 17
+ discover_test_cases
+ list_test_areas
+ get_test_case_details
+ search_tests
+ generate_test_suite_code
+ build_runbook
+ build_tier_runbook_file
+ validate_runbook_file
+ add_test_to_existing_runbook
+ run_lisa_tests
+ parse_test_results
+ check_lisa_environment
+ get_tier_info
+ analyze_test_run_with_llm
+ analyze_failure_root_cause
+ generate_analysis_report
+ run_and_analyze
 ```
 
 ---
@@ -394,7 +387,7 @@ git pull origin main
 # Reinstall (editable install updates automatically, but reinstall if pyproject.toml changed)
 pip install -e .
 
-# Restart VS Code
+# Restart the MCP server in VS Code (Command Palette → MCP: Restart Server)
 ```
 
 ---
@@ -426,6 +419,7 @@ All dependencies are declared in `pyproject.toml` and installed automatically:
 | `rich>=13.0` | Terminal formatting |
 | `click>=8.0` | CLI entry point |
 | `junitparser>=3.0` | Parse JUnit XML test results |
+| `httpx>=0.27.0` | HTTP client for Azure OpenAI API calls |
 
 ---
 
@@ -440,10 +434,15 @@ Quick fixes:
 pip install -e ~/lisa-mcp-server
 
 # "command not found: python3"
-sudo apt-get install python3    # Ubuntu
-brew install python@3.12        # macOS
+sudo apt-get install python3 # Ubuntu
+brew install python@3.12 # macOS
 
 # MCP server shows as "disconnected" in VS Code
 # Check the cwd path is absolute and the Python path is correct
-python3 ~/lisa-mcp-server/lisa_mcp/server.py   # run directly to see errors
+python3 ~/lisa-mcp-server/lisa_mcp/server.py # run directly to see errors
+
+# Azure OpenAI API errors
+# Verify your API key and that the endpoint URL is reachable
+curl -s -H "api-key: YOUR_KEY" \
+ "https://kkopenailearn.openai.azure.com/openai/models?api-version=2025-04-01-preview" | python3 -m json.tool
 ```

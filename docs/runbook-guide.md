@@ -39,30 +39,30 @@ import_builtin_tests: true
 
 # Variables and secrets
 variable:
-  - name: location
-    value: westus3
-  - name: subscription_id
-    value: $(subscription_id)
+ - name: location
+ value: westus3
+ - name: subscription_id
+ value: $(subscription_id)
 
 # Platform (where tests run)
 platform:
-  - type: azure
-    azure:
-      subscription_id: $(subscription_id)
-      marketplace: ubuntu focal 20.04-lts latest
+ - type: azure
+ azure:
+ subscription_id: $(subscription_id)
+ marketplace: ubuntu focal 20.04-lts latest
 
 # Test selection
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 
 # Output
 notifier:
-  - type: console
-  - type: html
-    path: ./report.html
-  - type: junit
-    path: ./results.xml
+ - type: console
+ - type: html
+ path: ./report.html
+ - type: junit
+ path: ./results.xml
 ```
 
 ---
@@ -82,10 +82,10 @@ notifier:
 ### `concurrency` guidance
 
 ```yaml
-concurrency: 1    # Serial (safest, cheapest)
-concurrency: 2    # Two parallel environments (2x faster, standard T1/T2 runs)
-concurrency: 4    # Four parallel (fast, but more cloud cost and quota)
-concurrency: 10   # High parallelism (for large-scale image testing)
+concurrency: 1 # Serial (safest, cheapest)
+concurrency: 2 # Two parallel environments (2x faster, standard T1/T2 runs)
+concurrency: 4 # Four parallel (fast, but more cloud cost and quota)
+concurrency: 10 # High parallelism (for large-scale image testing)
 ```
 
 Each concurrent "slot" can run a different test (or the same test on a different OS
@@ -99,20 +99,20 @@ Variables are referenced as `$(variable_name)` anywhere in the runbook.
 
 ```yaml
 variable:
-  # Simple name/value pair
-  - name: location
-    value: westus3
+ # Simple name/value pair
+ - name: location
+ value: westus3
 
-  # Value that must be passed on CLI (empty default)
-  - name: subscription_id
-    value: $(subscription_id)
+ # Value that must be passed on CLI (empty default)
+ - name: subscription_id
+ value: $(subscription_id)
 
-  # Load variables from an external file (e.g. secrets)
-  - file: ./secrets.yml
+ # Load variables from an external file (e.g. secrets)
+ - file: ./secrets.yml
 
-  # Boolean variable
-  - name: use_prod
-    value: false
+ # Boolean variable
+ - name: use_prod
+ value: false
 ```
 
 ### Secrets file pattern
@@ -122,16 +122,16 @@ Never commit credentials to your runbook. Use a separate file:
 ```yaml
 # secrets.yml (add to .gitignore)
 variable:
-  - name: subscription_id
-    value: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  - name: admin_private_key_file
-    value: /home/user/.ssh/lisa_id_rsa
+ - name: subscription_id
+ value: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ - name: admin_private_key_file
+ value: /home/user/.ssh/lisa_id_rsa
 ```
 
 Reference it from your main runbook:
 ```yaml
 variable:
-  - file: ./secrets.yml
+ - file: ./secrets.yml
 ```
 
 ### Overriding variables from CLI
@@ -150,61 +150,61 @@ lisa -r my_runbook.yml -v location:eastus2 -v subscription_id:my-id
 
 ```yaml
 platform:
-  - type: azure
-    admin_private_key_file: $(admin_private_key_file)  # SSH key for VM access
-    azure:
-      subscription_id: $(subscription_id)
+ - type: azure
+ admin_private_key_file: $(admin_private_key_file) # SSH key for VM access
+ azure:
+ subscription_id: $(subscription_id)
 
-      # OS image — one of these forms:
-      marketplace: ubuntu focal 20.04-lts latest            # Ubuntu 20.04
-      marketplace: ubuntu jammy 22.04-lts latest             # Ubuntu 22.04
-      marketplace: redhat rhel 8_5 8.5.2022012415            # RHEL 8.5
-      marketplace: debian debian-11 11 latest                # Debian 11
-      marketplace: microsoftcblmariner cbl-mariner 1-gen2 latest  # CBL-Mariner
+ # OS image — one of these forms:
+ marketplace: ubuntu focal 20.04-lts latest # Ubuntu 20.04
+ marketplace: ubuntu jammy 22.04-lts latest # Ubuntu 22.04
+ marketplace: redhat rhel 8_5 8.5.2022012415 # RHEL 8.5
+ marketplace: debian debian-11 11 latest # Debian 11
+ marketplace: microsoftcblmariner cbl-mariner 1-gen2 latest # CBL-Mariner
 
-      # VM size (optional, LISA picks appropriate default)
-      vm_size: Standard_D4s_v3
+ # VM size (optional, LISA picks appropriate default)
+ vm_size: Standard_D4s_v3
 
-      # Location (can also be set via variable)
-      location: westus3
+ # Location (can also be set via variable)
+ location: westus3
 
-      # Use shared image gallery instead of marketplace
-      # shared_gallery: /subscriptions/.../images/myImage/versions/1.0.0
+ # Use shared image gallery instead of marketplace
+ # shared_gallery: /subscriptions/.../images/myImage/versions/1.0.0
 ```
 
 ### HyperV
 
 ```yaml
 platform:
-  - type: hyperv
-    hyperv:
-      vhd: \\server\share\images\ubuntu-22.04.vhd
-      vm_generation: 2
+ - type: hyperv
+ hyperv:
+ vhd: \\server\share\images\ubuntu-22.04.vhd
+ vm_generation: 2
 ```
 
 ### Ready (existing VMs, no provisioning)
 
 ```yaml
 platform:
-  - type: ready
+ - type: ready
 
 environment:
-  environments:
-    - name: existing_vm
-      nodes:
-        - type: remote
-          address: 10.0.0.100
-          username: azureuser
-          private_key_file: ~/.ssh/id_rsa
+ environments:
+ - name: existing_vm
+ nodes:
+ - type: remote
+ address: 10.0.0.100
+ username: azureuser
+ private_key_file: ~/.ssh/id_rsa
 ```
 
 ### QEMU (local virtual machines)
 
 ```yaml
 platform:
-  - type: qemu
-    qemu:
-      image_path: /var/lib/lisa/images/ubuntu-22.04.qcow2
+ - type: qemu
+ qemu:
+ image_path: /var/lib/lisa/images/ubuntu-22.04.qcow2
 ```
 
 ---
@@ -215,22 +215,22 @@ The `testcase` section is a list of criteria blocks. LISA evaluates them in orde
 
 ```yaml
 testcase:
-  - criteria:
-      <filter fields>
-    select_action: include      # default
-    retry: 0                    # retry count on failure
-    times: 1                    # how many times to run
-    timeout: 3600               # override test timeout
+ - criteria:
+ <filter fields>
+ select_action: include # default
+ retry: 0 # retry count on failure
+ times: 1 # how many times to run
+ timeout: 3600 # override test timeout
 ```
 
 ### Criteria fields
 
 ```yaml
 criteria:
-  name: smoke_test              # match test method name (substring)
-  area: network                 # match area name
-  priority: [0, 1]             # match priority (list or single value)
-  tags: [sriov, performance]    # match any tag
+ name: smoke_test # match test method name (substring)
+ area: network # match area name
+ priority: [0, 1] # match priority (list or single value)
+ tags: [sriov, performance] # match any tag
 ```
 
 All specified criteria must match (AND logic). Multiple `testcase` entries are
@@ -251,54 +251,54 @@ evaluated in order (OR logic).
 
 ```yaml
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 ```
 
 #### Run one specific test
 
 ```yaml
 testcase:
-  - criteria:
-      name: smoke_test
+ - criteria:
+ name: smoke_test
 ```
 
 #### Run all tests in an area
 
 ```yaml
 testcase:
-  - criteria:
-      area: network
+ - criteria:
+ area: network
 ```
 
 #### Run all T2 tests except stress tests
 
 ```yaml
 testcase:
-  - criteria:
-      priority: [0, 1, 2]         # T2 = P0-P2
-  - criteria:
-      area: stress
-    select_action: exclude
+ - criteria:
+ priority: [0, 1, 2] # T2 = P0-P2
+ - criteria:
+ area: stress
+ select_action: exclude
 ```
 
 #### Run a specific test multiple times (soak test)
 
 ```yaml
 testcase:
-  - criteria:
-      name: nvme_io_test
-    times: 10                    # run 10 iterations
-    retry: 2                     # retry up to 2 times on failure
+ - criteria:
+ name: nvme_io_test
+ times: 10 # run 10 iterations
+ retry: 2 # retry up to 2 times on failure
 ```
 
 #### Retry all failed tests
 
 ```yaml
 testcase:
-  - criteria:
-      priority: [0, 1]
-    retry: 3                     # retry up to 3 times on failure
+ - criteria:
+ priority: [0, 1]
+ retry: 3 # retry up to 3 times on failure
 ```
 
 ---
@@ -307,18 +307,18 @@ testcase:
 
 ```yaml
 notifier:
-  # Console output (always recommended)
-  - type: console
-    log_level: INFO              # DEBUG | INFO | WARNING | ERROR
+ # Console output (always recommended)
+ - type: console
+ log_level: INFO # DEBUG | INFO | WARNING | ERROR
 
-  # HTML report (human-readable)
-  - type: html
-    path: ./reports/results.html
-    auto_open: true              # open in browser when done (local runs only)
+ # HTML report (human-readable)
+ - type: html
+ path: ./reports/results.html
+ auto_open: true # open in browser when done (local runs only)
 
-  # JUnit XML (CI/CD integration)
-  - type: junit
-    path: ./reports/results.xml
+ # JUnit XML (CI/CD integration)
+ - type: junit
+ path: ./reports/results.xml
 ```
 
 ### Log levels
@@ -339,18 +339,18 @@ building/deploying custom VMs.
 
 ```yaml
 transformer:
-  # Deploy an Azure VM from a VHD
-  - type: azure_deploy
-    requirement:
-      azure:
-        vhd: https://mystorage.blob.core.windows.net/vhds/myimage.vhd
-        vm_size: Standard_D4s_v3
+ # Deploy an Azure VM from a VHD
+ - type: azure_deploy
+ requirement:
+ azure:
+ vhd: https://mystorage.blob.core.windows.net/vhds/myimage.vhd
+ vm_size: Standard_D4s_v3
 
-  # Build a VM from source (custom kernel, etc.)
-  - type: azure_build_vhd
-    requirement:
-      azure:
-        location: westus3
+ # Build a VM from source (custom kernel, etc.)
+ - type: azure_build_vhd
+ requirement:
+ azure:
+ location: westus3
 ```
 
 ---
@@ -361,18 +361,18 @@ Test the same suite against multiple OS images or configurations automatically.
 
 ```yaml
 combinator:
-  type: grid
-  items:
-    - name: marketplace
-      value:
-        - "ubuntu focal 20.04-lts latest"
-        - "ubuntu jammy 22.04-lts latest"
-        - "redhat rhel 8_5 latest"
-        - "debian debian-11 11 latest"
+ type: grid
+ items:
+ - name: marketplace
+ value:
+ - "ubuntu focal 20.04-lts latest"
+ - "ubuntu jammy 22.04-lts latest"
+ - "redhat rhel 8_5 latest"
+ - "debian debian-11 11 latest"
 
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 ```
 
 This creates one test run per image in the list. With `concurrency: 4`, up to 4
@@ -386,8 +386,8 @@ Load custom test suites or tools from outside the main LISA repo:
 
 ```yaml
 extension:
-  - name: my_custom_tests
-    path: /home/user/my-lisa-extensions
+ - name: my_custom_tests
+ path: /home/user/my-lisa-extensions
 ```
 
 All test suites found in the extension path are loaded alongside built-in ones.
@@ -401,21 +401,21 @@ Split large runbooks into reusable pieces:
 ```yaml
 # azure_t1.yml
 include:
-  - path: ./common_variables.yml
-  - path: ./azure_platform.yml
+ - path: ./common_variables.yml
+ - path: ./azure_platform.yml
 
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 ```
 
 ```yaml
 # common_variables.yml
 variable:
-  - name: location
-    value: westus3
-  - name: concurrency
-    value: 2
+ - name: location
+ value: westus3
+ - name: concurrency
+ value: 2
 ```
 
 ---
@@ -439,7 +439,7 @@ value: $(variable_name)
 
 To use a literal `$(...)` string without substitution:
 ```yaml
-value: "$$(not_a_variable)"   # produces: $(not_a_variable)
+value: "$$(not_a_variable)" # produces: $(not_a_variable)
 ```
 
 ---
@@ -452,9 +452,9 @@ lisa -r my_runbook.yml
 
 # With variable overrides
 lisa -r my_runbook.yml \
-     -v subscription_id:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
-     -v admin_private_key_file:~/.ssh/lisa_id_rsa \
-     -v location:eastus
+ -v subscription_id:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
+ -v admin_private_key_file:~/.ssh/lisa_id_rsa \
+ -v location:eastus
 
 # Debug mode (verbose output)
 lisa -r my_runbook.yml -d
@@ -494,59 +494,59 @@ import_builtin_tests: true
 
 # --- Variables ---
 variable:
-  # These must be passed via -v on the CLI or set in secrets.yml
-  - name: subscription_id
-    value: $(subscription_id)
-  - name: admin_private_key_file
-    value: $(admin_private_key_file)
-  # These have defaults you can override
-  - name: location
-    value: eastus
-  - name: vm_size
-    value: Standard_D4s_v3
+ # These must be passed via -v on the CLI or set in secrets.yml
+ - name: subscription_id
+ value: $(subscription_id)
+ - name: admin_private_key_file
+ value: $(admin_private_key_file)
+ # These have defaults you can override
+ - name: location
+ value: eastus
+ - name: vm_size
+ value: Standard_D4s_v3
 
 # --- Platform ---
 platform:
-  - type: azure
-    admin_private_key_file: $(admin_private_key_file)
-    azure:
-      subscription_id: $(subscription_id)
-      location: $(location)
-      vm_size: $(vm_size)
-      # RHEL 9 latest from Red Hat
-      marketplace: redhat rhel 9_0 9.0.2022053014
+ - type: azure
+ admin_private_key_file: $(admin_private_key_file)
+ azure:
+ subscription_id: $(subscription_id)
+ location: $(location)
+ vm_size: $(vm_size)
+ # RHEL 9 latest from Red Hat
+ marketplace: redhat rhel 9_0 9.0.2022053014
 
 # --- Test selection (T2 = P0 + P1 + P2) ---
 testcase:
-  # Include all P0–P2 tests
-  - criteria:
-      priority: [0, 1, 2]
-  # Exclude known-flaky network stress test
-  - criteria:
-      name: network_flood_test
-    select_action: exclude
-  # Always include smoke test (even if excluded by other rules)
-  - criteria:
-      name: smoke_test
-    select_action: force-include
+ # Include all P0–P2 tests
+ - criteria:
+ priority: [0, 1, 2]
+ # Exclude known-flaky network stress test
+ - criteria:
+ name: network_flood_test
+ select_action: exclude
+ # Always include smoke test (even if excluded by other rules)
+ - criteria:
+ name: smoke_test
+ select_action: force-include
 
 # --- Reporting ---
 notifier:
-  - type: console
-    log_level: INFO
-  - type: html
-    path: ./reports/rhel9_t2_results.html
-    auto_open: false
-  - type: junit
-    path: ./reports/rhel9_t2_results.xml
+ - type: console
+ log_level: INFO
+ - type: html
+ path: ./reports/rhel9_t2_results.html
+ auto_open: false
+ - type: junit
+ path: ./reports/rhel9_t2_results.xml
 ```
 
 Run it:
 
 ```bash
 lisa -r azure_t2_rhel9.yml \
-     -v subscription_id:$SUBSCRIPTION_ID \
-     -v admin_private_key_file:~/.ssh/lisa_id_rsa
+ -v subscription_id:$SUBSCRIPTION_ID \
+ -v admin_private_key_file:~/.ssh/lisa_id_rsa
 ```
 
 ---
@@ -572,14 +572,14 @@ from lisa_mcp.tools.test_generator import generate_runbook_yaml
 from lisa_mcp.tools.runbook_builder import write_runbook
 
 yaml_str = generate_runbook_yaml(
-    name="RHEL 9 T2 Validation",
-    platform_type="azure",
-    tier="T2",
-    excluded_names=["network_flood_test"],
-    image="redhat rhel 9_0 9.0.2022053014",
-    location="eastus",
-    concurrency=2,
-    notifiers=["html", "junit"],
+ name="RHEL 9 T2 Validation",
+ platform_type="azure",
+ tier="T2",
+ excluded_names=["network_flood_test"],
+ image="redhat rhel 9_0 9.0.2022053014",
+ location="eastus",
+ concurrency=2,
+ notifiers=["html", "junit"],
 )
 
 write_runbook(yaml_str, "~/runbooks/rhel9_t2.yml")
@@ -602,10 +602,10 @@ The AI calls `validate_runbook_file(runbook_path="~/runbooks/rhel9_t2.yml")`.
 ```yaml
 name: Pre-Merge T0 Gate
 concurrency: 1
-exit_on_first_failure: true    # fail fast
+exit_on_first_failure: true # fail fast
 testcase:
-  - criteria:
-      priority: [0]            # P0 only
+ - criteria:
+ priority: [0] # P0 only
 ```
 
 ### Pattern 2 — Nightly T1 CI
@@ -614,11 +614,11 @@ testcase:
 name: Nightly T1
 concurrency: 2
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 notifier:
-  - type: junit
-    path: /ci/artifacts/results.xml
+ - type: junit
+ path: /ci/artifacts/results.xml
 ```
 
 ### Pattern 3 — Multi-distro grid test
@@ -627,16 +627,16 @@ notifier:
 name: Multi-Distro T1
 concurrency: 4
 combinator:
-  type: grid
-  items:
-    - name: marketplace
-      value:
-        - "ubuntu focal 20.04-lts latest"
-        - "ubuntu jammy 22.04-lts latest"
-        - "redhat rhel 8_5 latest"
+ type: grid
+ items:
+ - name: marketplace
+ value:
+ - "ubuntu focal 20.04-lts latest"
+ - "ubuntu jammy 22.04-lts latest"
+ - "redhat rhel 8_5 latest"
 testcase:
-  - criteria:
-      priority: [0, 1]
+ - criteria:
+ priority: [0, 1]
 ```
 
 ### Pattern 4 — Targeted feature test
@@ -645,8 +645,8 @@ testcase:
 name: NVMe Feature Validation
 concurrency: 1
 testcase:
-  - criteria:
-      area: nvme
+ - criteria:
+ area: nvme
 ```
 
 ### Pattern 5 — Performance benchmarking
@@ -655,8 +655,8 @@ testcase:
 name: Storage Performance
 concurrency: 1
 testcase:
-  - criteria:
-      area: perf_storage
-    times: 3                   # run 3 times for stable averages
-    retry: 1
+ - criteria:
+ area: perf_storage
+ times: 3 # run 3 times for stable averages
+ retry: 1
 ```
