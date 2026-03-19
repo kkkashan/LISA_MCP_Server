@@ -109,7 +109,7 @@ pip install -e ~/lisa-mcp-server
 
 ---
 
-### Claude shows `lisa` as `disconnected`
+### the AI shows `lisa` as `disconnected`
 
 **Cause:** The MCP server process failed to start.
 
@@ -126,7 +126,7 @@ Any import errors or startup failures will print here.
 
 **Step 2 — Check the path in `mcp_servers.json`:**
 ```bash
-cat ~/.claude/mcp_servers.json
+cat .vscode/mcp.json
 ```
 
 Make sure `cwd` is the **absolute** path to `lisa-mcp-server`, not a `~` shorthand:
@@ -152,10 +152,10 @@ which python3
 }
 ```
 
-**Step 4 — Restart Claude Code:**
+**Step 4 — Restart VS Code:**
 ```bash
-# Close all Claude Code windows, then reopen
-claude
+# Close all VS Code windows, then reopen
+the AI
 ```
 
 ---
@@ -190,10 +190,10 @@ pip install <missing-package>
 **Fix:**
 ```bash
 # Validate JSON syntax
-python3 -m json.tool ~/.claude/mcp_servers.json
+python3 -m json.tool .vscode/mcp.json
 
 # Check file location
-ls -la ~/.claude/
+ls -la ~/.vscode/
 ```
 
 ---
@@ -612,7 +612,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 ### Diagnose MCP tool calls
 
-In Claude Code, you can ask Claude to show what tools it called:
+In VS Code, you can ask the AI to show what tools it called:
 
 ```
 What tools did you just call, with what parameters, and what did they return?
@@ -620,7 +620,7 @@ What tools did you just call, with what parameters, and what did they return?
 
 ### Direct Python testing (bypass MCP)
 
-Test tools directly without Claude:
+Test tools directly without the AI:
 
 ```python
 from lisa_mcp.tools.test_discovery import discover_tests

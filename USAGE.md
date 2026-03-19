@@ -7,7 +7,7 @@ building runbooks, generating test code, running tests, and analyzing results.
 
 ## Table of Contents
 
-1. [How to use this with Claude](#1-how-to-use-this-with-claude)
+1. [How to use this with the AI](#1-how-to-use-this-with-the AI)
 2. [Workflow A — Discover and explore test cases](#workflow-a--discover-and-explore-test-cases)
 3. [Workflow B — Select tests for a scenario](#workflow-b--select-tests-for-a-scenario)
 4. [Workflow C — Build a runbook](#workflow-c--build-a-runbook)
@@ -19,16 +19,16 @@ building runbooks, generating test code, running tests, and analyzing results.
 
 ---
 
-## 1. How to use this with Claude
+## 1. How to use this with the AI
 
-Every tool in this MCP server is available to Claude Code as a function. You talk
-to Claude in natural language; Claude decides which tools to call and in what order.
+Every tool in this MCP server is available to VS Code as a function. You talk
+to the AI in natural language; The AI decides which tools to call and in what order.
 
 **You don't need to remember tool names.** Just describe what you want.
 
 ### Starting a LISA session
 
-A good opening message that gives Claude the context it needs:
+A good opening message that gives the AI the context it needs:
 
 ```
 I'm working with LISA (Microsoft's Linux testing framework) cloned at ~/lisa.
@@ -55,7 +55,7 @@ lisa_path = C:\Users\YourName\lisa       (Windows, if Python is native)
 What functional test areas exist in ~/lisa?
 ```
 
-Claude calls `list_test_areas(lisa_path="~/lisa")`.
+The AI calls `list_test_areas(lisa_path="~/lisa")`.
 
 Sample response:
 ```
@@ -73,7 +73,7 @@ Available test areas (18 total):
 Show me all the storage tests in ~/lisa — include their priority and description.
 ```
 
-Claude calls `discover_test_cases(lisa_path="~/lisa", area="storage")`.
+The AI calls `discover_test_cases(lisa_path="~/lisa", area="storage")`.
 
 Sample response:
 ```json
@@ -107,7 +107,7 @@ Sample response:
 Show me only T0 (highest priority) tests across all areas in ~/lisa
 ```
 
-Claude calls `discover_test_cases(lisa_path="~/lisa", tier="T0")`.
+The AI calls `discover_test_cases(lisa_path="~/lisa", tier="T0")`.
 
 The tier mapping:
 | Tier | Priorities included | Typical use |
@@ -126,7 +126,7 @@ The tier mapping:
 Show me only tests that support HyperV in ~/lisa
 ```
 
-Claude calls `discover_test_cases(lisa_path="~/lisa", platform="hyperv")`.
+The AI calls `discover_test_cases(lisa_path="~/lisa", platform="hyperv")`.
 
 ---
 
@@ -136,7 +136,7 @@ Claude calls `discover_test_cases(lisa_path="~/lisa", platform="hyperv")`.
 Search ~/lisa for any tests related to "NVMe" or "disk performance"
 ```
 
-Claude calls `search_tests(lisa_path="~/lisa", query="nvme disk performance")`.
+The AI calls `search_tests(lisa_path="~/lisa", query="nvme disk performance")`.
 
 Results are scored by relevance (name match > description match > area match).
 
@@ -148,7 +148,7 @@ Results are scored by relevance (name match > description match > area match).
 Give me the complete metadata for the test "Provisioning.smoke_test" in ~/lisa
 ```
 
-Claude calls `get_test_case_details(lisa_path="~/lisa", test_name="Provisioning.smoke_test")`.
+The AI calls `get_test_case_details(lisa_path="~/lisa", test_name="Provisioning.smoke_test")`.
 
 Returns:
 ```json
@@ -178,7 +178,7 @@ I'm about to publish a RHEL 9 image to Azure Marketplace.
 Which LISA tests should I run to validate it? LISA is at ~/lisa.
 ```
 
-Claude will:
+The AI will:
 1. Call `discover_test_cases` filtering by `platform="azure"` and `tier="T1"`
 2. Suggest a set of suites (provisioning, network, storage, cpu, memory)
 3. Offer to build a runbook
@@ -192,7 +192,7 @@ Show me all tests in ~/lisa that have no hardware requirements
 (no min_core_count, no special features needed)
 ```
 
-Claude discovers all tests and filters client-side for those with empty requirements.
+The AI discovers all tests and filters client-side for those with empty requirements.
 
 ---
 
@@ -202,7 +202,7 @@ Claude discovers all tests and filters client-side for those with empty requirem
 Find all tests in ~/lisa related to SR-IOV or high-performance networking
 ```
 
-Claude calls `search_tests(query="sriov SR-IOV accelerated networking")` to surface all relevant cases.
+The AI calls `search_tests(query="sriov SR-IOV accelerated networking")` to surface all relevant cases.
 
 ---
 
@@ -218,7 +218,7 @@ Build a T1 runbook for Azure using Ubuntu 22.04 LTS.
 Save it to ~/runbooks/ubuntu22_t1.yml
 ```
 
-Claude calls `build_tier_runbook_file`:
+The AI calls `build_tier_runbook_file`:
 - tier: `"T1"`
 - platform_type: `"azure"`
 - image: `"ubuntu jammy 22.04-lts latest"`
@@ -274,7 +274,7 @@ On Azure, Ubuntu 20.04, East US region.
 Save to ~/runbooks/targeted.yml
 ```
 
-Claude calls `build_runbook`:
+The AI calls `build_runbook`:
 ```python
 build_runbook(
     name="Targeted Test Run",
@@ -296,13 +296,13 @@ Build a T2 runbook but exclude anything related to stress tests
 and any test named "test_reboot"
 ```
 
-Claude calls `build_runbook`:
+The AI calls `build_runbook`:
 ```python
 build_runbook(
     name="T2 No Stress",
     tier="T2",
     excluded_names=["test_reboot"],
-    # stress tests are filtered by telling Claude to also exclude that area
+    # stress tests are filtered by telling the AI to also exclude that area
 )
 ```
 
@@ -314,7 +314,7 @@ build_runbook(
 Validate the runbook at ~/lisa/microsoft/runbook/azure.yml
 ```
 
-Claude calls `validate_runbook_file(runbook_path="~/lisa/microsoft/runbook/azure.yml")`.
+The AI calls `validate_runbook_file(runbook_path="~/lisa/microsoft/runbook/azure.yml")`.
 
 Returns:
 ```json
@@ -342,7 +342,7 @@ Returns:
 Add "StorageVerification.nvme_basic" to ~/runbooks/ubuntu22_t1.yml
 ```
 
-Claude calls `add_test_to_existing_runbook`:
+The AI calls `add_test_to_existing_runbook`:
 ```python
 add_test_to_existing_runbook(
     runbook_path="~/runbooks/ubuntu22_t1.yml",
@@ -365,7 +365,7 @@ Priority 1, functional, Azure and HyperV platforms.
 Save to ~/lisa/microsoft/testsuites/kvp_tests.py
 ```
 
-Claude calls `generate_test_suite_code` with:
+The AI calls `generate_test_suite_code` with:
 
 ```python
 generate_test_suite_code(
@@ -434,7 +434,7 @@ what Azure provisioned. It should use node.execute and assert_that.
 Priority 0.
 ```
 
-Claude reads the `lisa://test-case-template` resource and generates:
+The AI reads the `lisa://test-case-template` resource and generates:
 
 ```python
 @TestCaseMetadata(
@@ -468,7 +468,7 @@ Subscription ID is xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 SSH key is at ~/.ssh/lisa_id_rsa
 ```
 
-Claude calls `run_lisa_tests`:
+The AI calls `run_lisa_tests`:
 ```python
 run_lisa_tests(
     lisa_path="~/lisa",
@@ -504,7 +504,7 @@ Returns:
 Is LISA installed and ready to run tests?
 ```
 
-Claude calls `check_lisa_environment()` before attempting a run.
+The AI calls `check_lisa_environment()` before attempting a run.
 
 ### E3. Run with extra variable overrides
 
@@ -513,7 +513,7 @@ Run the azure.yml runbook at ~/lisa/microsoft/runbook/azure.yml
 but override the location to eastus2 and use a Standard_D4s_v5 VM size.
 ```
 
-Claude calls `run_lisa_tests` with:
+The AI calls `run_lisa_tests` with:
 ```python
 variables={
     "location": "eastus2",
@@ -532,7 +532,7 @@ variables={
 Parse the test results at ~/lisa/lisa_results.xml and summarize what failed.
 ```
 
-Claude calls `parse_test_results(source="~/lisa/lisa_results.xml")`.
+The AI calls `parse_test_results(source="~/lisa/lisa_results.xml")`.
 
 Returns:
 ```json
@@ -566,20 +566,20 @@ Here is my LISA run output. What went wrong?
 [PASS] CoreTest.verify_cpu_count (2.8s)
 ```
 
-Claude calls `parse_test_results(source=<the output text>)` and then explains:
+The AI calls `parse_test_results(source=<the output text>)` and then explains:
 - Which tests failed and why
 - Whether failures are related
 - Suggested next steps
 
 ### F3. Use the guided failure analysis prompt
 
-In Claude Code, type:
+In VS Code, type:
 
 ```
 /analyze_test_failure
 ```
 
-Claude prompts you to paste the failure output and then provides a structured analysis.
+The AI prompts you to paste the failure output and then provides a structured analysis.
 
 ---
 
@@ -648,11 +648,11 @@ Find all NVMe tests in ~/lisa at tier T1, then build a runbook
 for Azure East US with JUnit output. Save to ~/nvme_t1.yml
 ```
 
-Claude will chain `discover_test_cases` → `build_runbook` automatically.
+The AI will chain `discover_test_cases` → `build_runbook` automatically.
 
 ### Tip 4 — Validate before running
 
-Always ask Claude to validate a runbook before running it against real infrastructure:
+Always ask the AI to validate a runbook before running it against real infrastructure:
 
 ```
 Validate ~/my_runbook.yml before we run it
@@ -681,7 +681,7 @@ exact CLI command that would be executed.
 
 ## Reference: tool → natural language mapping
 
-| You say | Claude calls |
+| You say | the AI calls |
 |---------|-------------|
 | "what areas are in ~/lisa" | `list_test_areas` |
 | "show me all T0 tests" | `discover_test_cases(tier="T0")` |

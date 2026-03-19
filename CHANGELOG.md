@@ -11,7 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Unit test suite (pytest) for all core modules
 - Concurrent LLM failure analysis using `asyncio`
-- `ANTHROPIC_API_KEY` environment variable fallback (avoid passing key in tool args)
+- `AZURE_OPENAI_API_KEY` environment variable fallback (avoid passing key in tool args)
 - `compare_test_runs` tool for diffing two JUnit XML files
 
 ---
@@ -20,8 +20,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **LLM analysis pipeline** — three new tools (`analyze_test_run_with_llm`, `analyze_failure_root_cause`, `generate_analysis_report`) and an end-to-end tool (`run_and_analyze`) powered by Claude via the Anthropic API
-- **`lisa_mcp/tools/llm_analyzer.py`** — structured failure analysis and run-level summary using forced `tool_use` JSON output; models: `claude-sonnet-4-6`
+- **LLM analysis pipeline** — three new tools (`analyze_test_run_with_llm`, `analyze_failure_root_cause`, `generate_analysis_report`) and an end-to-end tool (`run_and_analyze`) powered by Azure OpenAI via the Azure OpenAI API
+- **`lisa_mcp/tools/llm_analyzer.py`** — structured failure analysis and run-level summary using forced `tool_use` JSON output; models: `gpt-4o`
 - **`lisa_mcp/tools/log_collector.py`** — memory-safe seek-based tail reader (256 KB cap), error-context extraction with 15-line windows around error signals, full run-directory walker
 - **`lisa_mcp/tools/report_generator.py`** — self-contained HTML report (inline CSS, no CDN) and GitHub-flavored Markdown report; `save_report()` writes both to disk
 - **`FailureAnalysis` / `RunAnalysisSummary` / `AnalysisReport` models** — Pydantic v2 models for structured LLM output (`RootCauseCategory`, `FailureSeverity`, severity sort key)
@@ -32,7 +32,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- `pyproject.toml`: added `anthropic>=0.40.0` dependency
+- `pyproject.toml`: added `httpx>=0.27.0` dependency
 - `README.md`: updated doc map to include all 17 tools, `docs/running-lisa.md`, `docs/llm-analysis.md`, `CHANGELOG.md`, `CONTRIBUTING.md`
 - Tool count in README and `docs/tools-reference.md` corrected from 13 → 17
 

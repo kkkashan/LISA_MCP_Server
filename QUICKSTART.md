@@ -1,14 +1,13 @@
 # Quickstart — LISA MCP Server
 
-Get from zero to Claude running LISA tests in 10 minutes.
+Get from zero to the AI running LISA tests in 10 minutes.
 
 ---
 
 ## Prerequisites
 
 - Python 3.10 or later
-- Claude Code CLI installed (`npm install -g @anthropic-ai/claude-code`)
-- Git
+- - Git
 
 ---
 
@@ -40,9 +39,9 @@ python3 -c "from lisa_mcp.server import mcp; print('OK —', mcp.name)"
 
 ---
 
-## Step 3 — Register with Claude Code
+## Step 3 — Register with VS Code
 
-Open or create `~/.claude/mcp_servers.json` and add:
+Open or create `.vscode/mcp.json` and add:
 
 ```json
 {
@@ -58,17 +57,17 @@ Open or create `~/.claude/mcp_servers.json` and add:
 
 Replace `/home/YOUR_USER/lisa-mcp-server` with the real absolute path from `pwd`.
 
-Restart Claude Code:
+Restart VS Code:
 
 ```bash
-claude
+the AI
 ```
 
 ---
 
 ## Step 4 — Verify the MCP tools are available
 
-In Claude Code, type:
+In VS Code, type:
 
 ```
 /mcp
@@ -86,7 +85,7 @@ You should see `lisa` listed as a connected server with 13 tools.
 Show me all the functional areas in my LISA repo at ~/lisa
 ```
 
-Claude calls `list_test_areas(lisa_path="~/lisa")` and returns something like:
+The AI calls `list_test_areas(lisa_path="~/lisa")` and returns something like:
 
 ```
 network, storage, cpu, memory, nvme, core, provisioning, hyperv, ...
@@ -98,7 +97,7 @@ network, storage, cpu, memory, nvme, core, provisioning, hyperv, ...
 Show me all priority-0 (T0) tests in the network area of ~/lisa
 ```
 
-Claude calls `discover_test_cases(lisa_path="~/lisa", area="network", tier="T0")`.
+The AI calls `discover_test_cases(lisa_path="~/lisa", area="network", tier="T0")`.
 
 ### 5c. Build a runbook
 
@@ -106,7 +105,7 @@ Claude calls `discover_test_cases(lisa_path="~/lisa", area="network", tier="T0")
 Build a T1 Azure runbook for Ubuntu 22.04 LTS and save it to ~/my_runbook.yml
 ```
 
-Claude calls `build_tier_runbook_file(tier="T1", platform_type="azure", output_path="~/my_runbook.yml")`.
+The AI calls `build_tier_runbook_file(tier="T1", platform_type="azure", output_path="~/my_runbook.yml")`.
 
 ### 5d. Generate a new test
 
@@ -115,7 +114,7 @@ Write a LISA test suite called "KernelSmokeTest" in the "cpu" area
 that checks the kernel version is at least 5.15. Priority 0, Azure only.
 ```
 
-Claude calls `generate_test_suite_code(...)` and returns complete Python source ready to copy into the LISA repo.
+The AI calls `generate_test_suite_code(...)` and returns complete Python source ready to copy into the LISA repo.
 
 ---
 
@@ -129,7 +128,7 @@ pip install -e .
 lisa --version
 ```
 
-Then ask Claude:
+Then ask the AI:
 
 ```
 Run the runbook at ~/my_runbook.yml using the LISA repo at ~/lisa.
@@ -137,7 +136,7 @@ Pass subscription_id:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 and admin_private_key_file:~/.ssh/id_rsa
 ```
 
-Claude calls `run_lisa_tests(...)` and returns stdout/stderr + exit code.
+The AI calls `run_lisa_tests(...)` and returns stdout/stderr + exit code.
 
 ---
 

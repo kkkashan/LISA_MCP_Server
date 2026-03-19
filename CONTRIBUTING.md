@@ -22,7 +22,7 @@ Thank you for your interest in contributing. This document covers how to set up 
 
 - Python 3.10 or newer
 - Git
-- (Optional) An Anthropic API key to test LLM analysis tools
+- (Optional) An Azure OpenAI API key to test LLM analysis tools
 
 ### Steps
 
@@ -59,7 +59,7 @@ lisa_mcp/
     ├── test_runner.py      ← lisa CLI subprocess wrapper
     ├── result_parser.py    ← JUnit XML + console output parser
     ├── log_collector.py    ← Memory-safe log tail and error extraction
-    ├── llm_analyzer.py     ← Anthropic API calls (structured tool_use)
+    ├── llm_analyzer.py     ← Azure OpenAI API calls (structured tool_use)
     └── report_generator.py ← HTML + Markdown report generation
 ```
 

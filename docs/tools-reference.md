@@ -600,7 +600,7 @@ Read resource: lisa://runbook-template
 
 ## Prompts
 
-Prompts trigger multi-step Claude workflows with a single command.
+Prompts trigger multi-step the AI workflows with a single command.
 
 ### `select_tests_for_scenario`
 

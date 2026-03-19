@@ -553,7 +553,7 @@ lisa -r azure_t2_rhel9.yml \
 
 ## 14. Building runbooks with the MCP server
 
-### Using Claude
+### Using Azure OpenAI
 
 ```
 Build a T2 Azure runbook for RHEL 9 in East US with:
@@ -563,7 +563,7 @@ Build a T2 Azure runbook for RHEL 9 in East US with:
 Save it to ~/runbooks/rhel9_t2.yml
 ```
 
-Claude calls `build_runbook(...)` with all the right parameters.
+The AI calls `build_runbook(...)` with all the right parameters.
 
 ### Using the Python API directly
 
@@ -591,7 +591,7 @@ write_runbook(yaml_str, "~/runbooks/rhel9_t2.yml")
 Validate ~/runbooks/rhel9_t2.yml before I run it
 ```
 
-Claude calls `validate_runbook_file(runbook_path="~/runbooks/rhel9_t2.yml")`.
+The AI calls `validate_runbook_file(runbook_path="~/runbooks/rhel9_t2.yml")`.
 
 ---
 

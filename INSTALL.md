@@ -12,7 +12,7 @@ This guide covers installation on every supported platform: Windows (WSL2), Ubun
 4. [Install on Fedora / RHEL / CentOS](#4-install-on-fedora--rhel--centos)
 5. [Install on macOS](#5-install-on-macos)
 6. [Install the LISA framework itself](#6-install-the-lisa-framework-itself)
-7. [Register the MCP server with Claude Code](#7-register-the-mcp-server-with-claude-code)
+7. [Register the MCP server with VS Code](#7-register-the-mcp-server-with-the AI-code)
 8. [Verify the installation](#8-verify-the-installation)
 9. [Upgrading](#9-upgrading)
 10. [Uninstalling](#10-uninstalling)
@@ -25,7 +25,7 @@ This guide covers installation on every supported platform: Windows (WSL2), Ubun
 |-----------|----------------|
 | Python | 3.10 |
 | pip | 23.0 |
-| Claude Code CLI | Latest |
+| VS Code | Latest |
 | Git | 2.30 |
 | OS | Windows 10/11 (WSL2), Ubuntu 20.04+, Fedora 36+, macOS 12+ |
 
@@ -233,13 +233,13 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/lisa_id_rsa -N ""
 
 ---
 
-## 7. Register the MCP server with Claude Code
+## 7. Register the MCP server with VS Code
 
 ### Step 1 — Find the settings file
 
 ```bash
 # The MCP servers configuration file
-ls ~/.claude/mcp_servers.json 2>/dev/null || echo "File does not exist yet"
+ls .vscode/mcp.json 2>/dev/null || echo "File does not exist yet"
 ```
 
 ### Step 2 — Create or update the file
@@ -252,7 +252,7 @@ REPO_PATH=$(cd ~/lisa-mcp-server && pwd)
 echo "Use this path: $REPO_PATH"
 ```
 
-Create `~/.claude/mcp_servers.json`:
+Create `.vscode/mcp.json`:
 
 ```json
 {
@@ -301,12 +301,12 @@ Merge the `lisa` key into your existing `mcpServers` object:
 }
 ```
 
-### Step 5 — Restart Claude Code
+### Step 5 — Restart VS Code
 
 ```bash
-# Exit any running Claude Code session
+# Exit any running VS Code session
 # Then start fresh:
-claude
+the AI
 ```
 
 ---
@@ -315,7 +315,7 @@ claude
 
 ### Check MCP connectivity
 
-In Claude Code, run:
+In VS Code, run:
 
 ```
 /mcp
@@ -394,7 +394,7 @@ git pull origin main
 # Reinstall (editable install updates automatically, but reinstall if pyproject.toml changed)
 pip install -e .
 
-# Restart Claude Code
+# Restart VS Code
 ```
 
 ---
@@ -409,7 +409,7 @@ pip uninstall lisa-mcp-server
 rm -rf ~/lisa-mcp-server
 
 # Remove the MCP server registration
-# Edit ~/.claude/mcp_servers.json and remove the "lisa" key
+# Edit .vscode/mcp.json and remove the "lisa" key
 ```
 
 ---
@@ -443,7 +443,7 @@ pip install -e ~/lisa-mcp-server
 sudo apt-get install python3    # Ubuntu
 brew install python@3.12        # macOS
 
-# MCP server shows as "disconnected" in Claude Code
+# MCP server shows as "disconnected" in VS Code
 # Check the cwd path is absolute and the Python path is correct
 python3 ~/lisa-mcp-server/lisa_mcp/server.py   # run directly to see errors
 ```

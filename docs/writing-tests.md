@@ -546,7 +546,7 @@ def verify_inter_vm_throughput(self, case_name, node, environment, log):
 
 ## 12. Generating with the MCP server
 
-Instead of writing boilerplate manually, ask Claude to generate it:
+Instead of writing boilerplate manually, ask the AI to generate it:
 
 ### Example prompt
 
@@ -563,7 +563,7 @@ Use node.execute() and assert_that() in the bodies.
 Save to ~/lisa/microsoft/testsuites/core/kernel_verification.py
 ```
 
-Claude calls `generate_test_suite_code(...)` and writes the file immediately.
+The AI calls `generate_test_suite_code(...)` and writes the file immediately.
 
 ---
 
@@ -580,7 +580,7 @@ testcase:
       area: core                     # include all "core" area tests
 ```
 
-Or ask Claude:
+Or ask the AI:
 
 ```
 Add "KernelVerification.verify_kernel_version" to my runbook at ~/my_runbook.yml

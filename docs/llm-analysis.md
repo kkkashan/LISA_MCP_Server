@@ -1,6 +1,6 @@
 # LLM-Powered Test Analysis — Complete Guide
 
-This guide explains how the LISA MCP server uses Claude (Anthropic API) to automatically
+This guide explains how the LISA MCP server uses Azure OpenAI to automatically
 analyze test failures, determine root causes, and generate rich reports.
 
 ---
@@ -48,7 +48,7 @@ LISA test run output
 ┌─────────────────────────────────────┐
 │  Step 3 — Per-failure analysis      │
 │  For each failed test:              │
-│  analyze_failure() → Claude API     │
+│  analyze_failure() → Azure OpenAI API     │
 │  Uses tool_use for structured JSON  │
 │  Returns FailureAnalysis:           │
 │    • root_cause_category            │
@@ -62,7 +62,7 @@ LISA test run output
                ▼
 ┌─────────────────────────────────────┐
 │  Step 4 — Run-level summary         │
-│  analyze_run() → Claude API         │
+│  analyze_run() → Azure OpenAI API         │
 │  Sends compact digest (not logs)    │
 │  Returns RunAnalysisSummary:        │
 │    • overall_health                 │
@@ -92,12 +92,12 @@ LISA test run output
 
 ## 2. Prerequisites
 
-### Get an Anthropic API key
+### Get an Azure OpenAI API key
 
-1. Go to https://console.anthropic.com
+1. Go to https://portal.azure.com
 2. Create an account or sign in
 3. Navigate to **API Keys** → **Create Key**
-4. Copy the key (starts with `sk-ant-...`)
+4. Copy the key (starts with `YOUR_AZURE_OPENAI_API_KEY`)
 
 The key is passed directly to the tools — it is never stored on disk by the MCP server.
 
@@ -131,15 +131,15 @@ lisa --version
 
 ```
 I have LISA test results at ~/lisa/lisa_results.xml and LISA logs at ~/lisa/runtime/latest.
-My Anthropic API key is sk-ant-xxx.
+My Azure OpenAI API key is YOUR_AZURE_OPENAI_API_KEY
 Analyze the failures and generate a report at ~/reports/
 ```
 
-Claude calls `generate_analysis_report`:
+The AI calls `generate_analysis_report`:
 ```python
 generate_analysis_report(
     results_source="~/lisa/lisa_results.xml",
-    api_key="sk-ant-xxx",
+    api_key="YOUR_AZURE_OPENAI_API_KEY",
     output_dir="~/reports/",
     run_dir="~/lisa/runtime/latest",
     report_base_name="my_run",
@@ -162,7 +162,7 @@ Open `my_run.html` in a browser for the full visual report.
 ### Option B — You have console output
 
 ```
-Here is my LISA run output. Analyze the failures with my API key sk-ant-xxx:
+Here is my LISA run output. Analyze the failures with my API key YOUR_AZURE_OPENAI_API_KEY:
 
 [PASS] Provisioning.smoke_test (12.3s)
 [FAIL] StorageVerification.nvme_io_test (120.5s)
@@ -170,11 +170,11 @@ Here is my LISA run output. Analyze the failures with my API key sk-ant-xxx:
 [PASS] CoreTest.verify_cpu_count (2.8s)
 ```
 
-Claude calls `analyze_test_run_with_llm`:
+The AI calls `analyze_test_run_with_llm`:
 ```python
 analyze_test_run_with_llm(
     results_source="[PASS] Provisioning...\n[FAIL] StorageVerification...",
-    api_key="sk-ant-xxx",
+    api_key="YOUR_AZURE_OPENAI_API_KEY",
 )
 ```
 
@@ -186,15 +186,15 @@ analyze_test_run_with_llm(
 The test StorageVerification.nvme_io_test failed with:
 "Expected exit code 0 but got 1"
 The log is at ~/lisa/logs/StorageVerification/nvme_io_test/console.log
-Analyze with API key sk-ant-xxx
+Analyze with API key YOUR_AZURE_OPENAI_API_KEY
 ```
 
-Claude calls `analyze_failure_root_cause`:
+The AI calls `analyze_failure_root_cause`:
 ```python
 analyze_failure_root_cause(
     test_name="StorageVerification.nvme_io_test",
     failure_message="Expected exit code 0 but got 1",
-    api_key="sk-ant-xxx",
+    api_key="YOUR_AZURE_OPENAI_API_KEY",
     log_file_path="~/lisa/logs/StorageVerification/nvme_io_test/console.log",
 )
 ```
@@ -206,11 +206,11 @@ analyze_failure_root_cause(
 ```
 Run the runbook at ~/runbooks/ubuntu22_t1.yml using LISA at ~/lisa.
 Pass subscription_id=xxxx and admin_private_key_file=~/.ssh/lisa_key.
-After running, analyze all failures with Anthropic API key sk-ant-xxx
+After running, analyze all failures with Azure OpenAI API key YOUR_AZURE_OPENAI_API_KEY
 and save the report to ~/reports/ubuntu22_t1/
 ```
 
-Claude calls `run_and_analyze` — fully automated end-to-end.
+The AI calls `run_and_analyze` — fully automated end-to-end.
 
 ---
 
@@ -295,7 +295,7 @@ a Jira ticket or email.
 One card per failed test, sorted by severity (critical first):
 - **Badge**: severity level (CRITICAL / HIGH / MEDIUM / LOW)
 - **Category badge**: root cause category
-- **Confidence**: how certain Claude is (0–100%)
+- **Confidence**: how certain The model is (0–100%)
 - **Root Cause**: technical explanation
 - **Recommended Fix**: specific actionable step
 - **Log Lines**: most relevant log lines in a code block
@@ -329,7 +329,7 @@ Problems that are not test code bugs — VM SKU, quota, network config.
 | `environment_setup` | cloud-init failure, wrong VM SKU, missing feature |
 | `flaky_test` | Race condition, intermittent timing issue |
 | `infrastructure` | Azure quota, VM provisioning failure, network glitch |
-| `unknown` | Claude couldn't determine the root cause from available data |
+| `unknown` | The model couldn't determine the root cause from available data |
 
 ---
 
@@ -367,14 +367,14 @@ When `run_dir` is provided, the log collector:
 
 5. **Caps** output at 8,000 characters per test (≈ 150 lines)
 
-6. **Sends** the context snippet to Claude alongside the failure message
+6. **Sends** the context snippet to the AI alongside the failure message
 
 ### What to do if logs aren't found
 
 If `run_dir` contains no log files:
 - Analysis still works using just the failure message and stack trace
 - Add `run_dir=None` explicitly to skip log collection
-- Claude will note low confidence when logs are insufficient
+- The AI will note low confidence when logs are insufficient
 
 ---
 
@@ -412,11 +412,11 @@ Run the runbook ~/runbooks/rhel9_t1.yml with:
   - LISA at ~/lisa
   - subscription_id: xxxx
   - admin_private_key_file: ~/.ssh/lisa_key
-  - Anthropic API key: sk-ant-xxx
+  - Azure OpenAI API key: YOUR_AZURE_OPENAI_API_KEY
 Save reports to ~/reports/rhel9_t1/
 ```
 
-Claude calls `run_and_analyze` and returns:
+The AI calls `run_and_analyze` and returns:
 
 ```
 ✅ Run complete.
@@ -440,7 +440,7 @@ Executive summary:
 
 ## 11. API cost guidance
 
-Approximate costs (February 2026 pricing for claude-sonnet-4-6):
+Approximate costs (February 2026 pricing for gpt-4o):
 
 | Scenario | Failures | Approx tokens | Approx cost |
 |----------|----------|---------------|-------------|
@@ -455,7 +455,7 @@ Use `max_failures_to_analyze` to cap the number of LLM calls:
 ```python
 analyze_test_run_with_llm(
     results_source="lisa_results.xml",
-    api_key="sk-ant-xxx",
+    api_key="YOUR_AZURE_OPENAI_API_KEY",
     max_failures_to_analyze=5,  # only analyze the 5 worst failures
 )
 ```
@@ -476,7 +476,7 @@ Sort by severity in post-processing if needed.
          -v subscription_id=${{ secrets.AZURE_SUB_ID }} \
          -v admin_private_key_file=/tmp/lisa_key
 
-- name: Analyze failures with Claude
+- name: Analyze failures with the AI
   if: always()   # run even if tests failed
   run: |
     python3 -c "
@@ -486,7 +486,7 @@ Sort by severity in post-processing if needed.
 
     result = generate_analysis_report(
         results_source='./lisa_results.xml',
-        api_key='${{ secrets.ANTHROPIC_API_KEY }}',
+        api_key='${{ secrets.AZURE_OPENAI_API_KEY }}',
         output_dir='./reports/',
         run_dir='.',
     )

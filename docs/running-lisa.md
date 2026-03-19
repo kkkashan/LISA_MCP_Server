@@ -12,7 +12,7 @@ This guide walks you through every step needed to run Microsoft LISA tests — f
 | Python 3.10+ | `python3 --version` to check |
 | Azure subscription | For cloud-based VM tests |
 | SSH key pair | For authenticating to test VMs |
-| Anthropic API key | Optional — only for LLM analysis |
+| Azure OpenAI API key | Optional — only for LLM analysis |
 
 ---
 
@@ -212,11 +212,11 @@ Open the JUnit XML in any CI system or IDE test reporter.
 If you are using the LISA MCP server, generate an HTML report:
 
 ```python
-# In your MCP client (e.g., Claude Desktop)
+# In your MCP client (e.g., the AI Desktop)
 analyze_test_run_with_llm(
     junit_xml_path="runtime/<run-id>/report/junit.xml",
     log_dir="runtime/<run-id>",
-    api_key="sk-ant-...",
+    api_key="YOUR_AZURE_OPENAI_API_KEY",
     output_dir="reports/"
 )
 ```
@@ -304,7 +304,7 @@ Avoid passing sensitive values on the command line. Create `secrets.yml` (never 
 # secrets.yml — DO NOT COMMIT
 subscription_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 admin_private_key_file: "~/.ssh/lisa_id_rsa"
-anthropic_api_key: "sk-ant-xxxxxxxxxxxx"
+azure_openai_api_key: "YOUR_AZURE_OPENAI_API_KEY"
 ```
 
 Run with the secrets file:
@@ -336,9 +336,9 @@ pip install lisa-mcp-server
 lisa-mcp
 ```
 
-### 2. Connect your MCP client (Claude Desktop)
+### 2. Connect your MCP client (the AI Desktop)
 
-Add to `claude_desktop_config.json`:
+Add to `.vscode/mcp.json`:
 
 ```json
 {
@@ -351,16 +351,16 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-### 3. Run analysis from Claude Desktop
+### 3. Run analysis from the AI Desktop
 
-Tell Claude:
+Tell the AI:
 
-> "Analyze the LISA test run at `runtime/2024-01-15_10-30-00/report/junit.xml` with logs at `runtime/2024-01-15_10-30-00/`. My Anthropic API key is sk-ant-..."
+> "Analyze the LISA test run at `runtime/2024-01-15_10-30-00/report/junit.xml` with logs at `runtime/2024-01-15_10-30-00/`. My Azure OpenAI API key is YOUR_AZURE_OPENAI_API_KEY"
 
-Claude will invoke the MCP tools to:
+The AI will invoke the MCP tools to:
 - Parse the JUnit XML for failures
 - Collect relevant log snippets for each failed test
-- Call Claude API for per-test root cause analysis
+- Call the AI API for per-test root cause analysis
 - Generate a run-level summary with priorities
 - Save HTML + Markdown reports to disk
 
@@ -406,7 +406,7 @@ cat "$LATEST/lisa.log" | grep -E "PASS|FAIL|SKIP"
 | `Connection timed out` | NSG blocking SSH (port 22) | Check Azure NSG rules for the resource group |
 | Tests skipped unexpectedly | Node requirements not met | Check `@TestCaseMetadata(requirement=...)` for the test |
 | `lisa.log` says `SKIPPED: environment not ready` | Setup phase failed | Read `environment/<env-id>/setup.log` for details |
-| LLM analysis `AuthenticationError` | Bad API key | Verify `anthropic_api_key` is correct and has credits |
+| LLM analysis `AuthenticationError` | Bad API key | Verify `azure_openai_api_key` is correct and has credits |
 
 ---
 
