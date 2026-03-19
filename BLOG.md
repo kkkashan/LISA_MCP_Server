@@ -321,7 +321,7 @@ Call `list_llm_providers` in chat to see all options, then pass the `endpoint` p
 
 | Provider | When to use |
 |----------|-------------|
-| **Azure OpenAI** (default) | Enterprise teams with Azure subscriptions. Best performance with `gpt-4o`. |
+| **Azure OpenAI** (default) | Enterprise teams with Azure subscriptions. Best performance with `sonnet-4.6`. |
 | **OpenAI** | Teams with OpenAI API access (`platform.openai.com`). |
 | **Azure AI Foundry / GitHub Models** | Free tier available with a GitHub PAT. Great for open-source contributors. |
 | **Ollama (local)** | Air-gapped environments or teams with data sovereignty requirements. Run `llama3`, `mistral`, `phi-3`, etc. locally — **completely free, no API key needed**. |
