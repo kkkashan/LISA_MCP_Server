@@ -517,3 +517,36 @@ Run the runbook with dry_run=true so I can see the command first
 | "deep-dive on one failure" | `analyze_failure_root_cause` |
 | "generate an analysis report" | `generate_analysis_report` |
 | "run and analyze end-to-end" | `run_and_analyze` |
+
+---
+
+## Workflow H — Selecting a Different LLM Provider
+
+By default the AI analysis tools use the pre-configured Azure OpenAI endpoint. To use a different provider, pass `endpoint` and `api_key` explicitly:
+
+**OpenAI:**
+```
+Analyze failures in lisa_results.xml
+API key: sk-...
+Endpoint: https://api.openai.com/v1/chat/completions
+Model: gpt-4o
+```
+
+**Local Ollama (no key needed):**
+```
+Analyze failures in lisa_results.xml
+API key: ollama
+Endpoint: http://localhost:11434/v1/chat/completions
+Model: llama3
+```
+
+**Azure AI Foundry:**
+```
+Analyze failures in lisa_results.xml
+API key: <GitHub Models token>
+Endpoint: https://models.inference.ai.azure.com/chat/completions
+Model: gpt-4o
+```
+
+Call `list_llm_providers` to see all supported providers and their example endpoints at any time.
+

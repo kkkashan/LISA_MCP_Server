@@ -1,14 +1,36 @@
 """
-LLM analyzer — use Azure OpenAI Responses API to produce
-structured failure analyses and run-level summaries.
+LLM analyzer — call any OpenAI-compatible API to produce structured
+failure analyses and run-level summaries.
+
+Supported providers
+-------------------
+1. Azure OpenAI Responses API (default)
+   Endpoint: https://<resource>.openai.azure.com/openai/responses?api-version=...
+   Auth:     api-key header
+
+2. OpenAI API
+   Endpoint: https://api.openai.com/v1/chat/completions
+   Auth:     Authorization: Bearer <key>
+
+3. Azure OpenAI Chat Completions API
+   Endpoint: https://<resource>.openai.azure.com/openai/deployments/<model>/chat/completions?api-version=...
+   Auth:     api-key header
+
+4. Local / self-hosted (Ollama, LM Studio, Azure AI Foundry, etc.)
+   Endpoint: http://localhost:11434/v1/chat/completions  (or any OpenAI-compatible URL)
+   Auth:     Authorization: Bearer <key>  (or empty string if not required)
+
+Provider is auto-detected from the endpoint URL:
+  • URL contains "openai.azure.com" + path segment "responses" → Azure Responses API
+  • Everything else → OpenAI-compatible Chat Completions API
 
 Design
 ------
-- All API calls use tool_choice to force structured JSON output.
+- All API calls use function/tool_choice to force structured JSON output.
 - The API key is always passed explicitly — never read from the environment.
 - Per-failure analysis is bounded by MAX_CHARS_PER_TEST from log_collector.
-- Run-level analysis sends a compact digest (not raw logs) so token usage
-  scales with failure count, not log volume.
+- Run-level analysis sends a compact digest so token usage scales with
+  failure count, not log volume.
 """
 
 from __future__ import annotations
@@ -27,20 +49,137 @@ from lisa_mcp.models import (
 from lisa_mcp.tools.log_collector import TestLogContext
 
 # ---------------------------------------------------------------------------
-# Default Azure OpenAI endpoint
+# Pre-configured default — Azure OpenAI Responses API
 # ---------------------------------------------------------------------------
 
 _DEFAULT_ENDPOINT = (
     "https://kkopenailearn.openai.azure.com/openai/responses"
     "?api-version=2025-04-01-preview"
 )
+_DEFAULT_MODEL = "gpt-4o"
+
+# Well-known alternative endpoint templates (shown to users in list_llm_providers)
+KNOWN_ENDPOINTS: dict[str, dict[str, str]] = {
+    "azure_openai_responses": {
+        "name": "Azure OpenAI — Responses API (default)",
+        "endpoint_template": "https://<resource>.openai.azure.com/openai/responses?api-version=2025-04-01-preview",
+        "auth_header": "api-key",
+        "default_model": "gpt-4o",
+        "notes": "Supports gpt-4o, gpt-4.1, o3, o4-mini, gpt-5, and more.",
+    },
+    "openai": {
+        "name": "OpenAI API",
+        "endpoint_template": "https://api.openai.com/v1/chat/completions",
+        "auth_header": "Authorization: Bearer <key>",
+        "default_model": "gpt-4o",
+        "notes": "Use your OpenAI API key from platform.openai.com",
+    },
+    "azure_openai_chat": {
+        "name": "Azure OpenAI — Chat Completions API",
+        "endpoint_template": "https://<resource>.openai.azure.com/openai/deployments/<deployment>/chat/completions?api-version=2024-02-01",
+        "auth_header": "api-key",
+        "default_model": "<deployment-name>",
+        "notes": "Classic Azure OpenAI format. Replace <resource> and <deployment>.",
+    },
+    "ollama": {
+        "name": "Ollama (local)",
+        "endpoint_template": "http://localhost:11434/v1/chat/completions",
+        "auth_header": "Authorization: Bearer ollama",
+        "default_model": "llama3",
+        "notes": "Run `ollama serve` first. Any model pulled with `ollama pull` works.",
+    },
+    "lm_studio": {
+        "name": "LM Studio (local)",
+        "endpoint_template": "http://localhost:1234/v1/chat/completions",
+        "auth_header": "Authorization: Bearer lm-studio",
+        "default_model": "<loaded-model-name>",
+        "notes": "Enable the Local Server in LM Studio settings.",
+    },
+    "azure_ai_foundry": {
+        "name": "Azure AI Foundry / GitHub Models",
+        "endpoint_template": "https://models.inference.ai.azure.com/chat/completions",
+        "auth_header": "Authorization: Bearer <github-token-or-azure-key>",
+        "default_model": "gpt-4o",
+        "notes": "Use a GitHub Personal Access Token or Azure AI Foundry key.",
+    },
+}
+
 
 # ---------------------------------------------------------------------------
-# Tool schemas — passed as tools= to the Azure OpenAI Responses API.
-# Field names mirror the Pydantic models exactly.
+# Tool schemas — common to both API formats
 # ---------------------------------------------------------------------------
 
-_FAILURE_TOOL: dict[str, Any] = {
+_FAILURE_TOOL_PARAMS: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "test_name": {"type": "string"},
+        "root_cause_category": {
+            "type": "string",
+            "enum": [c.value for c in RootCauseCategory],
+            "description": "Primary failure category.",
+        },
+        "root_cause_description": {
+            "type": "string",
+            "description": (
+                "2-4 sentence technical explanation of the failure root cause. "
+                "Be specific about which component, command, or configuration failed."
+            ),
+        },
+        "recommended_fix": {
+            "type": "string",
+            "description": (
+                "Concrete, actionable recommended fix or next debugging step. "
+                "Reference specific commands, files, or settings where possible."
+            ),
+        },
+        "severity": {
+            "type": "string",
+            "enum": [s.value for s in FailureSeverity],
+            "description": (
+                "critical=blocks release, high=major feature broken, "
+                "medium=partial impact, low=minor/informational."
+            ),
+        },
+        "relevant_log_lines": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Up to 10 log lines most relevant to the root cause.",
+        },
+        "confidence": {
+            "type": "number",
+            "description": "Confidence in this analysis (0.0=uncertain, 1.0=certain).",
+        },
+    },
+    "required": [
+        "test_name", "root_cause_category", "root_cause_description",
+        "recommended_fix", "severity", "relevant_log_lines", "confidence",
+    ],
+    "additionalProperties": False,
+}
+
+_RUN_TOOL_PARAMS: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "overall_health": {
+            "type": "string",
+            "enum": ["healthy", "degraded", "critical", "unknown"],
+        },
+        "health_score": {"type": "number"},
+        "failure_patterns": {"type": "array", "items": {"type": "string"}},
+        "top_priorities": {"type": "array", "items": {"type": "string"}},
+        "environment_issues": {"type": "array", "items": {"type": "string"}},
+        "recommendations": {"type": "array", "items": {"type": "string"}},
+        "executive_summary": {"type": "string"},
+    },
+    "required": [
+        "overall_health", "health_score", "failure_patterns", "top_priorities",
+        "environment_issues", "recommendations", "executive_summary",
+    ],
+    "additionalProperties": False,
+}
+
+# Azure Responses API tool format
+_FAILURE_TOOL_RESPONSES: dict[str, Any] = {
     "type": "function",
     "name": "report_failure_analysis",
     "description": (
@@ -48,61 +187,10 @@ _FAILURE_TOOL: dict[str, Any] = {
         "Call this tool exactly once with all required fields populated."
     ),
     "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "test_name": {"type": "string"},
-            "root_cause_category": {
-                "type": "string",
-                "enum": [c.value for c in RootCauseCategory],
-                "description": "Primary failure category.",
-            },
-            "root_cause_description": {
-                "type": "string",
-                "description": (
-                    "2-4 sentence technical explanation of the failure root cause. "
-                    "Be specific about which component, command, or configuration failed."
-                ),
-            },
-            "recommended_fix": {
-                "type": "string",
-                "description": (
-                    "Concrete, actionable recommended fix or next debugging step. "
-                    "Reference specific commands, files, or settings where possible."
-                ),
-            },
-            "severity": {
-                "type": "string",
-                "enum": [s.value for s in FailureSeverity],
-                "description": (
-                    "critical=blocks release, high=major feature broken, "
-                    "medium=partial impact, low=minor/informational."
-                ),
-            },
-            "relevant_log_lines": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Up to 10 log lines most relevant to the root cause.",
-            },
-            "confidence": {
-                "type": "number",
-                "description": "Confidence in this analysis (0.0=uncertain, 1.0=certain).",
-            },
-        },
-        "required": [
-            "test_name",
-            "root_cause_category",
-            "root_cause_description",
-            "recommended_fix",
-            "severity",
-            "relevant_log_lines",
-            "confidence",
-        ],
-        "additionalProperties": False,
-    },
+    "parameters": _FAILURE_TOOL_PARAMS,
 }
 
-_RUN_TOOL: dict[str, Any] = {
+_RUN_TOOL_RESPONSES: dict[str, Any] = {
     "type": "function",
     "name": "report_run_analysis",
     "description": (
@@ -110,65 +198,37 @@ _RUN_TOOL: dict[str, Any] = {
         "Call this tool exactly once."
     ),
     "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "overall_health": {
-                "type": "string",
-                "enum": ["healthy", "degraded", "critical", "unknown"],
-                "description": (
-                    "healthy=all P0 tests pass, degraded=some failures but system functional, "
-                    "critical=blocking failures present."
-                ),
-            },
-            "health_score": {
-                "type": "number",
-                "description": (
-                    "Weighted pass rate: 1.0 = everything passes, 0.0 = all critical failures."
-                ),
-            },
-            "failure_patterns": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Recurring themes observed across multiple failures.",
-            },
-            "top_priorities": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Ordered list of the 3-5 most important issues to resolve first.",
-            },
-            "environment_issues": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Infrastructure or configuration problems (not test code bugs).",
-            },
-            "recommendations": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Specific, actionable recommended actions for the team.",
-            },
-            "executive_summary": {
-                "type": "string",
-                "description": (
-                    "3-5 sentence non-technical summary suitable for stakeholders. "
-                    "Include overall status, key problems, and next steps."
-                ),
-            },
-        },
-        "required": [
-            "overall_health",
-            "health_score",
-            "failure_patterns",
-            "top_priorities",
-            "environment_issues",
-            "recommendations",
-            "executive_summary",
-        ],
-        "additionalProperties": False,
+    "parameters": _RUN_TOOL_PARAMS,
+}
+
+# OpenAI Chat Completions tool format
+_FAILURE_TOOL_CHAT: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "report_failure_analysis",
+        "description": (
+            "Report the structured root-cause analysis for a single LISA test failure. "
+            "Call this tool exactly once with all required fields populated."
+        ),
+        "strict": True,
+        "parameters": _FAILURE_TOOL_PARAMS,
     },
 }
 
-# System prompt injected into every API call
+_RUN_TOOL_CHAT: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "report_run_analysis",
+        "description": (
+            "Report the structured summary analysis for an entire LISA test run. "
+            "Call this tool exactly once."
+        ),
+        "strict": True,
+        "parameters": _RUN_TOOL_PARAMS,
+    },
+}
+
+# System prompt — identical for all providers
 _SYSTEM_PROMPT = """\
 You are an expert Linux kernel and systems engineer with deep experience in:
 - Azure VM infrastructure, Hyper-V integration, and cloud-init
@@ -190,7 +250,23 @@ When analyzing failures:
 
 
 # ---------------------------------------------------------------------------
-# Internal: call Azure OpenAI Responses API
+# Provider detection
+# ---------------------------------------------------------------------------
+
+def _is_azure_responses_api(endpoint: str) -> bool:
+    """Return True if the endpoint is the Azure OpenAI Responses API format."""
+    return "openai.azure.com" in endpoint and "/responses" in endpoint.split("?")[0]
+
+
+def _build_auth_headers(api_key: str, endpoint: str) -> dict[str, str]:
+    """Return the correct auth headers for the given endpoint."""
+    if "openai.azure.com" in endpoint:
+        return {"api-key": api_key, "Content-Type": "application/json"}
+    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+
+# ---------------------------------------------------------------------------
+# Low-level HTTP callers
 # ---------------------------------------------------------------------------
 
 def _call_responses_api(
@@ -204,7 +280,7 @@ def _call_responses_api(
     endpoint: str,
     timeout: int = 120,
 ) -> dict[str, Any]:
-    """Make a single call to the Azure OpenAI Responses API."""
+    """Call the Azure OpenAI Responses API."""
     payload = {
         "model": model,
         "instructions": instructions,
@@ -212,28 +288,99 @@ def _call_responses_api(
         "tools": tools,
         "tool_choice": tool_choice,
     }
-    headers = {
-        "api-key": api_key,
-        "Content-Type": "application/json",
-    }
     with httpx.Client(timeout=timeout) as client:
-        resp = client.post(endpoint, json=payload, headers=headers)
+        resp = client.post(endpoint, json=payload, headers=_build_auth_headers(api_key, endpoint))
         resp.raise_for_status()
         return resp.json()
 
 
-def _extract_tool_arguments(
-    response_data: dict[str, Any],
+def _call_chat_completions_api(
+    *,
+    system_prompt: str,
+    user_message: str,
+    tools: list[dict[str, Any]],
     tool_name: str,
+    api_key: str,
+    model: str,
+    endpoint: str,
+    timeout: int = 120,
 ) -> dict[str, Any]:
-    """Extract parsed arguments from the first function_call matching *tool_name*."""
-    for item in response_data.get("output", []):
-        if item.get("type") == "function_call" and item.get("name") == tool_name:
-            return json.loads(item["arguments"])
-    raise ValueError(
-        f"Model did not call tool '{tool_name}'. "
-        f"Response output types: {[o.get('type') for o in response_data.get('output', [])]}"
-    )
+    """Call any OpenAI-compatible Chat Completions API."""
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        "tools": tools,
+        "tool_choice": {"type": "function", "function": {"name": tool_name}},
+    }
+    with httpx.Client(timeout=timeout) as client:
+        resp = client.post(endpoint, json=payload, headers=_build_auth_headers(api_key, endpoint))
+        resp.raise_for_status()
+        return resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Unified caller — auto-detects provider from endpoint
+# ---------------------------------------------------------------------------
+
+def _call_llm(
+    *,
+    tool_name: str,           # "report_failure_analysis" or "report_run_analysis"
+    prompt: str,
+    api_key: str,
+    model: str,
+    endpoint: str,
+    timeout: int = 120,
+) -> dict[str, Any]:
+    """
+    Dispatch to the correct API format based on the endpoint URL,
+    then extract and return the tool arguments dict.
+    """
+    if _is_azure_responses_api(endpoint):
+        tool_obj = _FAILURE_TOOL_RESPONSES if tool_name == "report_failure_analysis" else _RUN_TOOL_RESPONSES
+        response = _call_responses_api(
+            instructions=_SYSTEM_PROMPT,
+            input_text=prompt,
+            tools=[tool_obj],
+            tool_choice={"type": "function", "name": tool_name},
+            api_key=api_key,
+            model=model,
+            endpoint=endpoint,
+            timeout=timeout,
+        )
+        # Extract from Responses API output array
+        for item in response.get("output", []):
+            if item.get("type") == "function_call" and item.get("name") == tool_name:
+                return json.loads(item["arguments"])
+        raise ValueError(
+            f"Model did not call tool '{tool_name}'. "
+            f"Output types: {[o.get('type') for o in response.get('output', [])]}"
+        )
+    else:
+        tool_obj = _FAILURE_TOOL_CHAT if tool_name == "report_failure_analysis" else _RUN_TOOL_CHAT
+        response = _call_chat_completions_api(
+            system_prompt=_SYSTEM_PROMPT,
+            user_message=prompt,
+            tools=[tool_obj],
+            tool_name=tool_name,
+            api_key=api_key,
+            model=model,
+            endpoint=endpoint,
+            timeout=timeout,
+        )
+        # Extract from Chat Completions choices[0].message.tool_calls
+        choices = response.get("choices", [])
+        if choices:
+            tool_calls = choices[0].get("message", {}).get("tool_calls", [])
+            for tc in tool_calls:
+                if tc.get("function", {}).get("name") == tool_name:
+                    return json.loads(tc["function"]["arguments"])
+        raise ValueError(
+            f"Model did not call tool '{tool_name}'. "
+            f"Response: {json.dumps(response)[:500]}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -246,12 +393,12 @@ def analyze_failure(
     stack_trace:     str,
     log_context:     TestLogContext | None,
     api_key:         str,
-    model:           str = "gpt-4o",
+    model:           str = _DEFAULT_MODEL,
     max_tokens:      int = 1500,
     endpoint:        str = _DEFAULT_ENDPOINT,
 ) -> FailureAnalysis:
     """
-    Analyze a single test failure with Azure OpenAI.
+    Analyze a single test failure using any supported LLM provider.
 
     Parameters
     ----------
@@ -259,26 +406,22 @@ def analyze_failure(
     failure_message : Short error from JUnit XML or console output.
     stack_trace     : Full traceback / error output.
     log_context     : Optional TestLogContext from log_collector.
-    api_key         : Azure OpenAI API key.
-    model           : Model deployment to use (default gpt-4o).
-    max_tokens      : Max response tokens (unused with Responses API, kept for signature compat).
-    endpoint        : Azure OpenAI Responses API endpoint URL.
+    api_key         : API key for the chosen provider.
+    model           : Model name (default gpt-4o).
+    max_tokens      : Unused — kept for signature compatibility.
+    endpoint        : Full API endpoint URL. Defaults to Azure OpenAI Responses API.
+                      Pass a different URL to use OpenAI, Ollama, LM Studio, etc.
 
-    Returns FailureAnalysis populated from tool_use response.
+    Returns FailureAnalysis populated from the tool call response.
     """
     prompt = _build_failure_prompt(test_name, failure_message, stack_trace, log_context)
-
-    response_data = _call_responses_api(
-        instructions=_SYSTEM_PROMPT,
-        input_text=prompt,
-        tools=[_FAILURE_TOOL],
-        tool_choice={"type": "function", "name": "report_failure_analysis"},
+    data = _call_llm(
+        tool_name="report_failure_analysis",
+        prompt=prompt,
         api_key=api_key,
         model=model,
         endpoint=endpoint,
     )
-
-    data = _extract_tool_arguments(response_data, "report_failure_analysis")
     return FailureAnalysis(
         test_name=data.get("test_name", test_name),
         root_cause_category=RootCauseCategory(
@@ -286,9 +429,7 @@ def analyze_failure(
         ),
         root_cause_description=data.get("root_cause_description", ""),
         recommended_fix=data.get("recommended_fix", ""),
-        severity=FailureSeverity(
-            data.get("severity", FailureSeverity.MEDIUM.value)
-        ),
+        severity=FailureSeverity(data.get("severity", FailureSeverity.MEDIUM.value)),
         relevant_log_lines=data.get("relevant_log_lines", [])[:10],
         confidence=float(data.get("confidence", 0.5)),
     )
@@ -301,29 +442,24 @@ def analyze_run(
     failed:   int,
     skipped:  int,
     api_key:  str,
-    model:    str = "gpt-4o",
+    model:    str = _DEFAULT_MODEL,
     max_tokens: int = 2000,
     endpoint:   str = _DEFAULT_ENDPOINT,
 ) -> RunAnalysisSummary:
     """
     Produce a run-level summary from pre-computed per-failure analyses.
 
-    Sends a compact digest (not raw logs), so token usage scales with
-    failure count, not log volume.
+    Parameters mirror analyze_failure(). Sends a compact digest (not raw logs)
+    so token usage scales with failure count, not log volume.
     """
     prompt = _build_run_prompt(failure_analyses, total, passed, failed, skipped)
-
-    response_data = _call_responses_api(
-        instructions=_SYSTEM_PROMPT,
-        input_text=prompt,
-        tools=[_RUN_TOOL],
-        tool_choice={"type": "function", "name": "report_run_analysis"},
+    data = _call_llm(
+        tool_name="report_run_analysis",
+        prompt=prompt,
         api_key=api_key,
         model=model,
         endpoint=endpoint,
     )
-
-    data = _extract_tool_arguments(response_data, "report_run_analysis")
     return RunAnalysisSummary(
         overall_health=data.get("overall_health", "unknown"),
         health_score=float(data.get("health_score", 0.0)),
@@ -388,8 +524,8 @@ def _build_run_prompt(
     lines: list[str] = [
         "## LISA Test Run Summary",
         "",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Total  | {total} |",
         f"| Passed | {passed} ({pass_pct:.1f}%) |",
         f"| Failed | {failed} |",
@@ -402,7 +538,6 @@ def _build_run_prompt(
     if not failure_analyses:
         lines.append("No failures recorded.")
     else:
-        # Table: test name | category | severity | confidence | root cause (brief)
         lines += [
             "| Test | Category | Severity | Confidence | Root Cause Summary |",
             "|------|----------|----------|------------|-------------------|",
@@ -417,7 +552,6 @@ def _build_run_prompt(
             )
         lines.append("")
 
-        # Individual recommendations (brief)
         lines.append("## Individual Recommendations")
         for fa in sorted(failure_analyses, key=lambda x: x.severity_order):
             lines.append(f"- **{fa.test_name}**: {fa.recommended_fix[:120]}")

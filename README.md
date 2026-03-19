@@ -30,9 +30,9 @@ LISA (Linux Integration Services Automation) is Microsoft's quality validation s
 
 ---
 
-## LLM Failure Analysis — Powered by Azure OpenAI
+## LLM Failure Analysis — Multi-Provider AI Support
 
-The server integrates with **Azure OpenAI** to provide AI-powered failure analysis:
+The server integrates with any OpenAI-compatible LLM to provide AI-powered failure analysis:
 
 - **Root cause classification** — categorizes failures (disk I/O, network timeout, kernel panic, etc.)
 - **Actionable fix recommendations** — specific commands, file paths, settings to investigate
@@ -40,13 +40,30 @@ The server integrates with **Azure OpenAI** to provide AI-powered failure analys
 - **Run-level executive summary** — stakeholder-ready health report
 - **HTML + Markdown reports** — shareable analysis artifacts
 
-Configure your Azure OpenAI endpoint and API key when calling any `analyze_*` or `run_and_analyze` tool:
+**Supported providers** — pass any `endpoint` to the analyze tools:
+
+| Provider | Example endpoint |
+|----------|-----------------|
+| Azure OpenAI Responses API *(default)* | `https://<resource>.openai.azure.com/openai/responses?api-version=2025-04-01-preview` |
+| OpenAI | `https://api.openai.com/v1/chat/completions` |
+| Azure OpenAI Chat Completions | `https://<resource>.openai.azure.com/openai/deployments/<model>/chat/completions?api-version=2024-02-01` |
+| Ollama (local) | `http://localhost:11434/v1/chat/completions` |
+| LM Studio (local) | `http://localhost:1234/v1/chat/completions` |
+| Azure AI Foundry | `https://models.inference.ai.azure.com/chat/completions` |
+
+Use the `list_llm_providers` tool to see all options and their configuration at any time.
+
+Example usage in chat:
 
 ```
 Analyze the failures in ~/lisa/lisa_results.xml
-Azure OpenAI key: <your-key>
+API key: <your-key>
+Endpoint: https://api.openai.com/v1/chat/completions
+Model: gpt-4o
 Save the report to ~/reports/
 ```
+
+If no endpoint is provided, the server uses the pre-configured Azure OpenAI default.
 
 ---
 
@@ -124,7 +141,7 @@ Check the LISA environment and show me the available test tiers
 
 ---
 
-## The 17 MCP Tools
+## The 18 MCP Tools
 
 | Category | Tool | What it does |
 |----------|------|--------------|
@@ -145,6 +162,7 @@ Check the LISA environment and show me the available test tiers
 | | `analyze_failure_root_cause` | Deep-dive AI analysis for one failure |
 | | `generate_analysis_report` | Full pipeline → HTML + Markdown report |
 | | `run_and_analyze` | End-to-end: run tests → analyze → report |
+| | `list_llm_providers` | List all supported LLM providers and endpoint config |
 
 ---
 
@@ -162,7 +180,7 @@ lisa-mcp-server/
 │   └── mcp.json                      ← VS Code MCP server registration
 │
 ├── lisa_mcp/                         ← Python package
-│   ├── server.py                     ← FastMCP server (17 tools, 3 resources, 3 prompts)
+│   ├── server.py                     ← FastMCP server (18 tools, 3 resources, 3 prompts)
 │   ├── models.py                     ← Pydantic data models
 │   └── tools/
 │       ├── test_discovery.py         ← AST-based test scanner
@@ -176,7 +194,7 @@ lisa-mcp-server/
 │
 ├── docs/
 │   ├── running-lisa.md               ← Step-by-step run guide
-│   ├── tools-reference.md            ← All 17 tools documented
+│   ├── tools-reference.md            ← All 18 tools documented
 │   ├── test-discovery.md             ← Discovery internals
 │   ├── writing-tests.md              ← Test authoring guide
 │   ├── runbook-guide.md              ← Runbook authoring guide

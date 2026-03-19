@@ -648,3 +648,23 @@ Root-causes a test failure from output text.
 2. Identifies root cause categories (configuration, test code, infrastructure, timeout)
 3. Proposes fixes
 4. Offers corrected runbook or test code if appropriate
+
+---
+
+### `list_llm_providers`
+
+**Category**: AI Analysis  
+**Description**: List all supported LLM providers and their endpoint configuration.
+
+**Parameters**: none
+
+**Returns**: JSON object with:
+- `default_endpoint` — the currently configured default endpoint URL
+- `default_model` — default model name (`gpt-4o`)
+- `providers` — dict of 6 named providers with endpoint templates, example models, and notes
+- `usage_hint` — instructions on passing `endpoint`/`api_key` to analyze tools
+
+**Example prompt**:
+```
+Show me all the LLM providers I can use for failure analysis
+```

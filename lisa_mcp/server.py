@@ -34,7 +34,7 @@ from lisa_mcp.tools.runbook_builder import (
 from lisa_mcp.tools.test_runner import run_tests, check_lisa_installed
 from lisa_mcp.tools.result_parser import parse_results, summarize
 from lisa_mcp.tools.log_collector import collect_run_logs, extract_error_context, TestLogContext
-from lisa_mcp.tools.llm_analyzer import analyze_failure, analyze_run
+from lisa_mcp.tools.llm_analyzer import analyze_failure, analyze_run, KNOWN_ENDPOINTS, _DEFAULT_ENDPOINT, _DEFAULT_MODEL
 from lisa_mcp.tools.report_generator import (
     build_analysis_report,
     generate_html_report,
@@ -611,23 +611,25 @@ def analyze_test_run_with_llm(
     results_source: str,
     api_key: str,
     run_dir: str | None = None,
-    model: str = "gpt-4o",
+    model: str = _DEFAULT_MODEL,
     max_failures_to_analyze: int = 20,
+    endpoint: str = _DEFAULT_ENDPOINT,
 ) -> str:
     """
-    Parse LISA test results and use Azure OpenAI to analyze every failure — providing
+    Parse LISA test results and use an LLM to analyze every failure — providing
     root cause, severity, recommended fix, and a full run-level summary.
 
     Parameters
     ----------
     results_source           : JUnit XML file path OR raw console output string.
-    api_key                  : Azure OpenAI API key.
+    api_key                  : API key for the chosen LLM provider.
     run_dir                  : Optional path to the LISA run output directory.
                                When provided, per-test log files are extracted and
-                               sent to Azure OpenAI as additional evidence for each failure.
-    model                    : Azure OpenAI model (default "gpt-4o").
+                               sent to the LLM as additional evidence for each failure.
+    model                    : Model name (default "gpt-4o").
     max_failures_to_analyze  : Max LLM calls for per-failure analysis (default 20).
-                               Caps API cost on large runs.
+    endpoint                 : LLM API endpoint URL. Defaults to Azure OpenAI Responses API.
+                               Use list_llm_providers to see all supported options.
 
     Returns JSON with:
       - run_metrics: total/passed/failed/skipped counts
@@ -667,6 +669,7 @@ def analyze_test_run_with_llm(
                 log_context=log_ctx,
                 api_key=api_key,
                 model=model,
+                endpoint=endpoint,
             )
             failure_analyses.append(fa)
 
@@ -679,6 +682,7 @@ def analyze_test_run_with_llm(
             skipped=run_summary_raw.skipped,
             api_key=api_key,
             model=model,
+            endpoint=endpoint,
         )
 
         return json.dumps(
@@ -695,6 +699,8 @@ def analyze_test_run_with_llm(
                 "failure_analyses":  [fa.model_dump() for fa in failure_analyses],
                 "analyzed_count":    len(failure_analyses),
                 "truncated":         len(failed_results) < run_summary_raw.failed,
+                "endpoint_used":     endpoint,
+                "model_used":        model,
             },
             indent=2,
         )
@@ -713,10 +719,11 @@ def analyze_failure_root_cause(
     api_key:       str,
     stack_trace:   str = "",
     log_file_path: str | None = None,
-    model:         str = "gpt-4o",
+    model:         str = _DEFAULT_MODEL,
+    endpoint:      str = _DEFAULT_ENDPOINT,
 ) -> str:
     """
-    Deep-dive root cause analysis for a SINGLE test failure using Azure OpenAI.
+    Deep-dive root cause analysis for a SINGLE test failure using an LLM.
 
     Use this when you want to investigate one failure in detail — for example
     after a run, to understand why a specific test failed.
@@ -725,11 +732,11 @@ def analyze_failure_root_cause(
     ----------
     test_name       : Full test name, e.g. "StorageTest.verify_disk_io".
     failure_message : Short failure/error message from the test output.
-    api_key         : Azure OpenAI API key.
+    api_key         : API key for the chosen LLM provider.
     stack_trace     : Optional full traceback or error output.
     log_file_path   : Optional path to a specific log file for this test.
-                      If provided, error context is extracted and sent to Azure OpenAI.
-    model           : Azure OpenAI model (default "gpt-4o").
+    model           : Model name (default "gpt-4o").
+    endpoint        : LLM API endpoint URL. Use list_llm_providers to see options.
 
     Returns JSON with a FailureAnalysis object containing:
       root_cause_category, root_cause_description, recommended_fix,
@@ -756,6 +763,7 @@ def analyze_failure_root_cause(
             log_context=log_ctx,
             api_key=api_key,
             model=model,
+            endpoint=endpoint,
         )
         return fa.model_dump_json(indent=2)
     except Exception as exc:
@@ -773,8 +781,9 @@ def generate_analysis_report(
     output_dir:             str,
     run_dir:                str | None = None,
     report_base_name:       str = "lisa_analysis",
-    model:                  str = "gpt-4o",
+    model:                  str = _DEFAULT_MODEL,
     max_failures_to_analyze: int = 20,
+    endpoint:               str = _DEFAULT_ENDPOINT,
 ) -> str:
     """
     Run full LLM analysis of a LISA test run and write HTML + Markdown reports.
@@ -782,19 +791,20 @@ def generate_analysis_report(
     This is the single-command way to go from raw results → beautiful report:
       1. Parses test results (JUnit XML or console output)
       2. Collects per-test log context (if run_dir given)
-      3. Calls Azure OpenAI to analyze each failure
-      4. Calls Azure OpenAI for a run-level summary
+      3. Calls the LLM to analyze each failure
+      4. Calls the LLM for a run-level summary
       5. Generates a self-contained HTML report + Markdown report
 
     Parameters
     ----------
     results_source          : JUnit XML file path OR raw console output string.
-    api_key                 : Azure OpenAI API key.
+    api_key                 : API key for the chosen LLM provider.
     output_dir              : Directory to write report files into (created if needed).
     run_dir                 : Optional LISA run directory for per-test log files.
     report_base_name        : Base filename without extension (default "lisa_analysis").
-    model                   : Azure OpenAI model (default "gpt-4o").
+    model                   : Model name (default "gpt-4o").
     max_failures_to_analyze : LLM call cap (default 20).
+    endpoint                : LLM API endpoint URL. Use list_llm_providers to see options.
 
     Returns JSON with:
       - html_path: absolute path to the generated HTML report
@@ -829,6 +839,7 @@ def generate_analysis_report(
                 log_context=log_ctx,
                 api_key=api_key,
                 model=model,
+                endpoint=endpoint,
             )
             failure_analyses.append(fa)
 
@@ -841,6 +852,7 @@ def generate_analysis_report(
             skipped=run_data.skipped,
             api_key=api_key,
             model=model,
+            endpoint=endpoint,
         )
 
         # Build report object
@@ -882,10 +894,11 @@ def run_and_analyze(
     api_key:                 str,
     output_dir:              str,
     variables:               dict[str, str] | None = None,
-    model:                   str = "gpt-4o",
+    model:                   str = _DEFAULT_MODEL,
     timeout_seconds:         int = 7200,
     max_failures_to_analyze: int = 20,
     report_base_name:        str = "lisa_analysis",
+    endpoint:                str = _DEFAULT_ENDPOINT,
 ) -> str:
     """
     END-TO-END PIPELINE: run LISA tests → collect logs → analyze with Azure OpenAI
@@ -976,6 +989,7 @@ def run_and_analyze(
             report_base_name=report_base_name,
             model=model,
             max_failures_to_analyze=max_failures_to_analyze,
+            endpoint=endpoint,
         )
         analysis = json.loads(analysis_json)
 
@@ -1008,6 +1022,48 @@ def run_and_analyze(
     except Exception as exc:
         return json.dumps({"error": str(exc), "type": type(exc).__name__}, indent=2)
 
+
+
+
+# ============================================================================
+# TOOL 18 — list_llm_providers
+# ============================================================================
+
+@mcp.tool()
+def list_llm_providers() -> str:
+    """
+    List all supported LLM providers and their endpoint configuration.
+
+    Use this to discover what LLM options you can pass to the analyze_* tools.
+    Each provider entry shows the endpoint template, auth method, default model,
+    and any usage notes.
+
+    Returns JSON with a dict of provider_key → provider_info, plus
+    the current default endpoint and model.
+
+    Supported providers
+    --------------------
+    • azure_openai_responses — Azure OpenAI Responses API (default, pre-configured)
+    • openai                 — OpenAI API (api.openai.com)
+    • azure_openai_chat      — Azure OpenAI Chat Completions API
+    • ollama                 — Local Ollama server
+    • lm_studio              — Local LM Studio server
+    • azure_ai_foundry       — Azure AI Foundry / GitHub Models
+    """
+    return json.dumps(
+        {
+            "default_endpoint": _DEFAULT_ENDPOINT,
+            "default_model": _DEFAULT_MODEL,
+            "providers": KNOWN_ENDPOINTS,
+            "usage_hint": (
+                "Pass the 'endpoint' and 'api_key' parameters to any analyze_* tool. "
+                "The provider is auto-detected from the endpoint URL. "
+                "Example: endpoint='https://api.openai.com/v1/chat/completions', "
+                "api_key='sk-...', model='gpt-4o'"
+            ),
+        },
+        indent=2,
+    )
 
 # ============================================================================
 # RESOURCES — static reference material
