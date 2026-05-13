@@ -1,0 +1,2 @@
+[mcps.servers]
+lisa = { args = ["-m", "lisa_mcp.server"], command = "python3", tools = ["*"], type = "stdio" }
